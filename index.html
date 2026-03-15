@@ -7176,7 +7176,8 @@ function openGDriveSetup() {
   const cidEl    = document.getElementById('gdClientId');
   const autoSave = document.getElementById('gdAutoSave');
   const autoLoad = document.getElementById('gdAutoLoad');
-  if (cidEl)    cidEl.value = cfg.clientId || '';
+  // Always show the hardcoded Client ID
+  if (cidEl)    cidEl.value = GD.CLIENT_ID || cfg.clientId || '';
   if (autoSave) autoSave.checked = cfg.autoSave || false;
   if (autoLoad) autoLoad.checked = cfg.autoLoad || false;
 
@@ -7207,13 +7208,8 @@ function gdCheckClientId() {
 
 /* ── Auth ─────────────────────────────────── */
 function gdToggleConnect() {
-  if (GD.accessToken) {
-    openGDriveSetup();
-  } else if (GD.CLIENT_ID) {
-    gdConnect();
-  } else {
-    openGDriveSetup();
-  }
+  // Always open setup modal so user can confirm and connect
+  openGDriveSetup();
 }
 
 function gdConnect() {

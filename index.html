@@ -749,6 +749,21 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
               <label>หมายเหตุ</label>
               <input type="text" id="txNote" placeholder="เช่น ห้อง OR1, เคสที่ 5..." oninput="syncCaseLabel(this.value)">
             </div>
+            <!-- แนบไฟล์ (ซ่อนไว้ก่อน) -->
+            <div style="margin-bottom:4px;display:none" id="entryAttachSection">
+              <label>📎 แนบไฟล์ (รูปภาพ / เอกสาร)</label>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap">
+                <label style="background:var(--primary-b);border:1.5px solid var(--primary-l);border-radius:var(--r);padding:6px 12px;cursor:pointer;font-size:.8rem;font-weight:600;color:var(--primary);display:flex;align-items:center;gap:5px;text-transform:none;letter-spacing:0">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  เลือกไฟล์
+                  <input type="file" id="entryFileInput" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" style="display:none" onchange="entryFilesSelected(this.files)">
+                </label>
+                <span id="entryFileStatus" style="font-size:.76rem;color:var(--g4)">ยังไม่ได้เลือกไฟล์</span>
+              </div>
+              <div id="entryFilePreview" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
+            </div>
+
+            </div>
           </div>
         </div>
 
@@ -4850,6 +4865,10 @@ function saveEntry() {
   showT(`✅ บันทึก ${ne.length} รายการ (${txType === 'receive' ? 'รับ' : 'จ่าย'})`, 'ok');
   gdAutoSaveIfEnabled();
   updSum();
+  // Upload pending files if any
+  if (_entryPendingFiles && _entryPendingFiles.length > 0) {
+    uploadEntryFiles(batchId);
+  }
   clearEntry();
 }
 
@@ -4864,6 +4883,14 @@ function clearEntry() {
   syncCaseLabel('');
   const lbl = document.getElementById('txDocLabel');
   if (lbl) { lbl.textContent = '— กรอกด้วยตนเอง / ค้นหา —'; lbl.style.color = 'var(--g4)'; }
+  // Reset file attachment
+  _entryPendingFiles = [];
+  const fi = document.getElementById('entryFileInput');
+  if (fi) fi.value = '';
+  const fs = document.getElementById('entryFileStatus');
+  if (fs) fs.textContent = 'ยังไม่ได้เลือกไฟล์';
+  const fp = document.getElementById('entryFilePreview');
+  if (fp) fp.innerHTML = '';
 }
 
 /* ══════════════════════════════════════════
@@ -6745,6 +6772,8 @@ function rHistDay() {
               onchange="updateCaseLabel('${safeKey}',this.value)">
           </div>
           <button onclick="event.stopPropagation();openAddEntryToBatch('${safeKey}','${esc(g.date)}','${esc(g.type)}')" style="padding:2px 9px;border:1.5px solid var(--primary);background:#fff;color:var(--primary);border-radius:5px;cursor:pointer;font-size:.73rem;font-weight:600;font-family:'Sarabun',sans-serif">+ เพิ่ม</button>
+          <button onclick="event.stopPropagation();openBatchAttach('${safeKey}')" style="padding:2px 9px;border:1.5px solid var(--accent);background:#fff;color:var(--accent);border-radius:5px;cursor:pointer;font-size:.73rem;font-weight:600;font-family:'Sarabun',sans-serif">📎 แนบ${g.attachments&&g.attachments.length?` (${g.attachments.length})`:''}
+          </button>
           <button onclick="event.stopPropagation();deleteBatch('${safeKey}')" style="padding:2px 9px;border:1.5px solid #fca5a5;background:#fff8f8;color:var(--danger);border-radius:5px;cursor:pointer;font-size:.73rem;font-weight:600;font-family:'Sarabun',sans-serif">ลบ</button>
           <span class="batch-arrow" style="font-size:.82rem;color:var(--g4)">▼</span>
         </div>
@@ -7834,6 +7863,198 @@ function eePick(code, desc) {
 }
 
 /* ══════════════════════════════════════════
+   FILE ATTACHMENT — Apps Script Upload
+══════════════════════════════════════════ */
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzxyZ0k8_HF1RDRXkUmnxLpazVBZr6X45ac62Ke74891z6pjKYgNTkoH7NRyQFOYe4b/exec';
+const DRIVE_FOLDER_ID = '1I3aRwLH5_e3rh4tevUCVCssFMPjOpW_u';
+
+let _attachBatchKey = null;  // current batch being attached to
+let _entryPendingFiles = []; // files pending upload when saving entry
+
+// ── Entry Form: files selected ──
+function entryFilesSelected(files) {
+  _entryPendingFiles = Array.from(files);
+  const status = document.getElementById('entryFileStatus');
+  const preview = document.getElementById('entryFilePreview');
+  if (!files.length) { status.textContent = 'ยังไม่ได้เลือกไฟล์'; preview.innerHTML=''; return; }
+  status.textContent = `เลือกแล้ว ${files.length} ไฟล์ (จะอัปโหลดเมื่อกดบันทึก)`;
+  preview.innerHTML = Array.from(files).map(f => {
+    const isImg = f.type.startsWith('image/');
+    const icon = isImg ? '🖼️' : f.name.endsWith('.pdf') ? '📄' : '📁';
+    return `<span style="background:var(--primary-b);border:1px solid var(--primary-l);border-radius:5px;padding:3px 8px;font-size:.73rem;color:var(--primary)">${icon} ${f.name}</span>`;
+  }).join('');
+}
+
+// ── Upload single file to Apps Script ──
+async function uploadFileToGDrive(file, filename) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const base64 = e.target.result.split(',')[1];
+      try {
+        const res = await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filename: filename || file.name,
+            mimeType: file.type || 'application/octet-stream',
+            data: base64,
+            folderId: DRIVE_FOLDER_ID
+          })
+        });
+        const json = await res.json();
+        if (json.fileUrl || json.url || json.id) {
+          resolve({
+            name: file.name,
+            url: json.fileUrl || json.url || `https://drive.google.com/file/d/${json.id}/view`,
+            id: json.id || '',
+            type: file.type
+          });
+        } else {
+          reject(new Error(json.error || 'Upload failed'));
+        }
+      } catch(err) { reject(err); }
+    };
+    reader.onerror = () => reject(new Error('อ่านไฟล์ไม่ได้'));
+    reader.readAsDataURL(file);
+  });
+}
+
+// ── Upload pending files after saveEntry ──
+async function uploadEntryFiles(batchId) {
+  if (!_entryPendingFiles.length) return;
+  const files = _entryPendingFiles.slice();
+  _entryPendingFiles = [];
+  document.getElementById('entryFileStatus').textContent = `กำลังอัปโหลด ${files.length} ไฟล์...`;
+  try {
+    const uploaded = [];
+    for (let i=0; i<files.length; i++) {
+      const ts = Date.now();
+      const fname = `${batchId}_${ts}_${files[i].name}`;
+      showT(`อัปโหลด ${i+1}/${files.length}: ${files[i].name}`, '');
+      const result = await uploadFileToGDrive(files[i], fname);
+      uploaded.push(result);
+    }
+    // Save URLs to saved batch
+    saved = saved.map(s => {
+      if ((s.batchId || s.savedAt) === batchId) {
+        return { ...s, attachments: [...(s.attachments||[]), ...uploaded] };
+      }
+      return s;
+    });
+    localStorage.setItem('orSE', JSON.stringify(saved));
+    if (window._fbWrite) window._fbWrite('orSE', saved);
+    document.getElementById('entryFileStatus').textContent = `✅ อัปโหลด ${uploaded.length} ไฟล์แล้ว`;
+    document.getElementById('entryFilePreview').innerHTML = '';
+    showT(`✅ อัปโหลดไฟล์แนบ ${uploaded.length} ไฟล์แล้ว`, 'ok');
+  } catch(err) {
+    showT('❌ อัปโหลดไฟล์ไม่สำเร็จ: ' + err.message, 'e');
+    document.getElementById('entryFileStatus').textContent = '❌ อัปโหลดล้มเหลว';
+  }
+}
+
+// ── Batch Attach Modal ──
+let _attachCurrentFiles = [];
+function openBatchAttach(batchKey) {
+  _attachBatchKey = batchKey;
+  _attachCurrentFiles = [];
+  document.getElementById('attachProgress').style.display = 'none';
+  document.getElementById('attachProgressBar').style.width = '0%';
+  document.getElementById('attachFileInput').value = '';
+  renderAttachFileList();
+  document.getElementById('modalAttach')?.classList.add('open');
+}
+
+function renderAttachFileList() {
+  const list = document.getElementById('attachFileList');
+  if (!list) return;
+  // Get existing attachments for this batch
+  const batchItems = saved.filter(s => (s.batchId || s.savedAt) === _attachBatchKey);
+  const attachments = batchItems.length ? (batchItems[0].attachments || []) : [];
+  if (!attachments.length && !_attachCurrentFiles.length) {
+    list.innerHTML = '<div style="text-align:center;padding:16px;color:var(--g4);font-size:.82rem">ยังไม่มีไฟล์แนบ</div>';
+    return;
+  }
+  let html = '';
+  // Existing uploaded files
+  attachments.forEach((f, i) => {
+    const isImg = (f.type||'').startsWith('image/');
+    const icon = isImg ? '🖼️' : f.name?.endsWith('.pdf') ? '📄' : '📁';
+    html += `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--g1);border-radius:6px;border:1px solid var(--g3)">
+      <span style="font-size:1.1rem">${icon}</span>
+      <span style="flex:1;font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.name||'ไฟล์'}</span>
+      <a href="${f.url}" target="_blank" style="font-size:.73rem;color:var(--primary);text-decoration:none;border:1px solid var(--primary);border-radius:4px;padding:2px 7px">เปิด</a>
+      <button onclick="removeAttachment('${_attachBatchKey}',${i})" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:.85rem;padding:2px 4px">✕</button>
+    </div>`;
+  });
+  list.innerHTML = html || '<div style="text-align:center;padding:12px;color:var(--g4);font-size:.82rem">ยังไม่มีไฟล์แนบ</div>';
+}
+
+function handleAttachFiles(files) {
+  if (!files.length) return;
+  uploadAttachFiles(Array.from(files));
+}
+function handleAttachDrop(files) {
+  if (!files.length) return;
+  uploadAttachFiles(Array.from(files));
+}
+
+async function uploadAttachFiles(files) {
+  const prog = document.getElementById('attachProgress');
+  const bar  = document.getElementById('attachProgressBar');
+  const txt  = document.getElementById('attachProgressTxt');
+  prog.style.display = '';
+  const uploaded = [];
+  for (let i=0; i<files.length; i++) {
+    const pct = Math.round((i/files.length)*100);
+    bar.style.width = pct + '%';
+    txt.textContent = `กำลังอัปโหลด ${i+1}/${files.length}: ${files[i].name}`;
+    try {
+      const ts = Date.now();
+      const fname = `${_attachBatchKey}_${ts}_${files[i].name}`;
+      const result = await uploadFileToGDrive(files[i], fname);
+      uploaded.push(result);
+    } catch(err) {
+      showT('❌ ' + files[i].name + ': ' + err.message, 'e');
+    }
+  }
+  bar.style.width = '100%';
+  txt.textContent = `✅ อัปโหลดสำเร็จ ${uploaded.length}/${files.length} ไฟล์`;
+  setTimeout(() => { prog.style.display='none'; bar.style.width='0%'; }, 2000);
+
+  if (uploaded.length) {
+    saved = saved.map(s => {
+      if ((s.batchId || s.savedAt) === _attachBatchKey) {
+        return { ...s, attachments: [...(s.attachments||[]), ...uploaded] };
+      }
+      return s;
+    });
+    localStorage.setItem('orSE', JSON.stringify(saved));
+    if (window._fbWrite) window._fbWrite('orSE', saved);
+    renderAttachFileList();
+    rHistDay();
+    showT(`✅ แนบไฟล์ ${uploaded.length} ไฟล์แล้ว`, 'ok');
+  }
+  document.getElementById('attachFileInput').value = '';
+}
+
+function removeAttachment(batchKey, idx) {
+  saved = saved.map(s => {
+    if ((s.batchId || s.savedAt) === batchKey) {
+      const atts = [...(s.attachments||[])];
+      atts.splice(idx, 1);
+      return { ...s, attachments: atts };
+    }
+    return s;
+  });
+  localStorage.setItem('orSE', JSON.stringify(saved));
+  if (window._fbWrite) window._fbWrite('orSE', saved);
+  renderAttachFileList();
+  rHistDay();
+  showT('🗑️ ลบไฟล์แนบแล้ว', 'ok');
+}
+
+/* ══════════════════════════════════════════
    PIN SYSTEM
 ══════════════════════════════════════════ */
 const PIN_MASTER = '0612';        // hardcoded, cannot change
@@ -8121,6 +8342,39 @@ function saveNewPin() {
   </div>
 </div>
 
+
+<!-- MODAL: แนบไฟล์ (Batch) -->
+<div class="modal-bg" id="modalAttach" style="z-index:2500">
+  <div class="modal" style="width:min(520px,95vw)">
+    <div class="mh">
+      <span class="mt">📎 แนบไฟล์</span>
+      <span class="mc" onclick="closeModal('modalAttach')">✕</span>
+    </div>
+    <div class="mb2">
+      <div style="border:2px dashed var(--g3);border-radius:var(--r);padding:18px;text-align:center;background:var(--g1);margin-bottom:12px;cursor:pointer;position:relative"
+        ondragover="event.preventDefault();this.style.borderColor='var(--primary-l)'"
+        ondragleave="this.style.borderColor='var(--g3)'"
+        ondrop="event.preventDefault();this.style.borderColor='var(--g3)';handleAttachDrop(event.dataTransfer.files)">
+        <input type="file" id="attachFileInput" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+          style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"
+          onchange="handleAttachFiles(this.files)">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--primary-l)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p style="font-size:.84rem;color:var(--g6)"><strong style="color:var(--primary)">คลิกเพื่อเลือกไฟล์</strong> หรือลากมาวาง</p>
+        <p style="font-size:.72rem;color:var(--g4);margin-top:4px">รองรับ รูปภาพ, PDF, Word, Excel</p>
+      </div>
+      <div id="attachProgress" style="display:none;margin-bottom:10px">
+        <div style="background:var(--g2);border-radius:20px;height:8px;overflow:hidden">
+          <div id="attachProgressBar" style="height:100%;background:var(--primary);width:0%;transition:width .3s;border-radius:20px"></div>
+        </div>
+        <div id="attachProgressTxt" style="font-size:.74rem;color:var(--g6);margin-top:4px;text-align:center"></div>
+      </div>
+      <div id="attachFileList" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto"></div>
+    </div>
+    <div class="mf">
+      <button class="btn bs" onclick="closeModal('modalAttach')">ปิด</button>
+    </div>
+  </div>
+</div>
 
 <div class="modal-bg" id="modalChangePin" style="z-index:100000">
   <div class="modal" style="width:340px">

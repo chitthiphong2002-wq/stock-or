@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -26,22 +27,22 @@
   --g1:#f8fafc;--g2:#f1f5f9;--g3:#e2e8f0;--g4:#94a3b8;--g6:#475569;--g8:#1e293b;
   --r:6px;--sh:0 1px 6px rgba(0,0,0,.08);--sh2:0 4px 16px rgba(0,0,0,.12);
 
-  /* legacy aliases */
-  --gd:var(--primary);--gm:var(--primary-m);--gl:var(--primary-l);--gb:var(--primary-b);
-  --am:var(--warn);--ab:var(--warn-b);
-  --rd:var(--danger);--rb:var(--danger-b);
-  --bl:var(--info);--bb:var(--info-b);
+/* legacy aliases */
+–gd:var(–primary);–gm:var(–primary-m);–gl:var(–primary-l);–gb:var(–primary-b);
+–am:var(–warn);–ab:var(–warn-b);
+–rd:var(–danger);–rb:var(–danger-b);
+–bl:var(–info);–bb:var(–info-b);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Sarabun',sans-serif;background:var(--g2);color:var(--g8);min-height:100vh}
+body{font-family:‘Sarabun’,sans-serif;background:var(–g2);color:var(–g8);min-height:100vh}
 
 /* ── HEADER ── */
 header{
-  background:var(--primary);
-  color:#fff;padding:0 20px;
-  display:flex;align-items:stretch;gap:0;
-  box-shadow:0 2px 8px rgba(0,0,0,.25);
-  position:sticky;top:0;z-index:100;min-height:52px
+background:var(–primary);
+color:#fff;padding:0 20px;
+display:flex;align-items:stretch;gap:0;
+box-shadow:0 2px 8px rgba(0,0,0,.25);
+position:sticky;top:0;z-index:100;min-height:52px
 }
 header .logo{font-size:20px;display:flex;align-items:center;padding-right:12px;border-right:1px solid rgba(255,255,255,.2);margin-right:14px}
 header .htx{display:flex;flex-direction:column;justify-content:center}
@@ -52,10 +53,10 @@ header .sp{flex:1}
 
 /* ── LAYOUT ── */
 .con{max-width:1440px;margin:0 auto;padding:14px 16px}
-.card{background:#fff;border-radius:var(--r);box-shadow:var(--sh);margin-bottom:12px;overflow:hidden}
+.card{background:#fff;border-radius:var(–r);box-shadow:var(–sh);margin-bottom:12px;overflow:hidden}
 
 /* card header */
-.ch{background:var(--primary);border-bottom:none;padding:8px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ch{background:var(–primary);border-bottom:none;padding:8px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .ch h2{font-size:.87rem;font-weight:600;color:#fff}
 .ch .sp{flex:1}
 
@@ -66,72 +67,72 @@ header .sp{flex:1}
 
 /* ── TABS ── */
 .tabs{
-  display:flex;
-  background:var(--primary);
-  border-radius:var(--r) var(--r) 0 0;
-  margin-bottom:0;gap:0;
-  overflow:hidden;
-  box-shadow:var(--sh)
+display:flex;
+background:var(–primary);
+border-radius:var(–r) var(–r) 0 0;
+margin-bottom:0;gap:0;
+overflow:hidden;
+box-shadow:var(–sh)
 }
 .tab{
-  padding:10px 18px;font-weight:600;font-size:.83rem;cursor:pointer;
-  color:rgba(255,255,255,.65);white-space:nowrap;
-  border-bottom:3px solid transparent;
-  transition:all .18s;
-  display:flex;align-items:center;gap:5px
+padding:10px 18px;font-weight:600;font-size:.83rem;cursor:pointer;
+color:rgba(255,255,255,.65);white-space:nowrap;
+border-bottom:3px solid transparent;
+transition:all .18s;
+display:flex;align-items:center;gap:5px
 }
 .tab.ac{color:#fff;border-bottom-color:#38bdf8;background:rgba(255,255,255,.1)}
 .tab:hover:not(.ac){color:rgba(255,255,255,.9);background:rgba(255,255,255,.07)}
-.tc{display:none;border-radius:0 0 var(--r) var(--r)}.tc.ac{display:block}
+.tc{display:none;border-radius:0 0 var(–r) var(–r)}.tc.ac{display:block}
 
 /* ── FORMS ── */
 .fr{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px}
 @media(max-width:640px){.fr{grid-template-columns:1fr}}
 .fr2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
-label{display:block;font-size:.76rem;font-weight:600;color:var(--g6);margin-bottom:3px;text-transform:uppercase;letter-spacing:.03em}
+label{display:block;font-size:.76rem;font-weight:600;color:var(–g6);margin-bottom:3px;text-transform:uppercase;letter-spacing:.03em}
 input[type=date],select,input[type=text],input[type=number]{
-  width:100%;padding:7px 10px;
-  border:1.5px solid var(--g3);border-radius:var(--r);
-  font-family:'Sarabun',sans-serif;font-size:.87rem;
-  background:#fff;color:var(--g8);transition:border-color .2s
+width:100%;padding:7px 10px;
+border:1.5px solid var(–g3);border-radius:var(–r);
+font-family:‘Sarabun’,sans-serif;font-size:.87rem;
+background:#fff;color:var(–g8);transition:border-color .2s
 }
-input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0 0 0 3px rgba(33,150,196,.12)}
+input:focus,select:focus{outline:none;border-color:var(–primary-l);box-shadow:0 0 0 3px rgba(33,150,196,.12)}
 
 /* ── TYPE TOGGLE ── */
 .tt{display:flex;gap:6px}
-.tb{flex:1;padding:7px;border:2px solid var(--g3);border-radius:var(--r);cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.87rem;font-weight:600;background:#fff;transition:all .2s;text-align:center}
-.tb.recv.ac{border-color:var(--info);background:var(--info-b);color:var(--info)}
-.tb.issu.ac{border-color:var(--danger);background:var(--danger-b);color:var(--danger)}
+.tb{flex:1;padding:7px;border:2px solid var(–g3);border-radius:var(–r);cursor:pointer;font-family:‘Sarabun’,sans-serif;font-size:.87rem;font-weight:600;background:#fff;transition:all .2s;text-align:center}
+.tb.recv.ac{border-color:var(–info);background:var(–info-b);color:var(–info)}
+.tb.issu.ac{border-color:var(–danger);background:var(–danger-b);color:var(–danger)}
 
 /* ── BUTTONS ── */
-.btn{padding:7px 16px;border:none;border-radius:var(--r);cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.84rem;font-weight:600;transition:all .18s;display:inline-flex;align-items:center;gap:5px}
-.bsv{background:var(--primary);color:#fff}.bsv:hover{background:var(--primary-m)}
-.bpu{background:var(--accent);color:#fff}.bpu:hover{background:var(--success)}
-.bs{background:var(--g2);color:var(--g6);border:1.5px solid var(--g3)}.bs:hover{background:var(--g3)}
-.bd{background:var(--danger-b);color:var(--danger);border:1.5px solid #fca5a5}.bd:hover{background:#fee2e2}
-.bx{background:var(--success-b);color:var(--success);border:1.5px solid #99f6e4}.bx:hover{background:#ccfbf1}
-.bc{background:var(--info-b);color:var(--info);border:1.5px solid #93c5fd}.bc:hover{background:#dbeafe}
+.btn{padding:7px 16px;border:none;border-radius:var(–r);cursor:pointer;font-family:‘Sarabun’,sans-serif;font-size:.84rem;font-weight:600;transition:all .18s;display:inline-flex;align-items:center;gap:5px}
+.bsv{background:var(–primary);color:#fff}.bsv:hover{background:var(–primary-m)}
+.bpu{background:var(–accent);color:#fff}.bpu:hover{background:var(–success)}
+.bs{background:var(–g2);color:var(–g6);border:1.5px solid var(–g3)}.bs:hover{background:var(–g3)}
+.bd{background:var(–danger-b);color:var(–danger);border:1.5px solid #fca5a5}.bd:hover{background:#fee2e2}
+.bx{background:var(–success-b);color:var(–success);border:1.5px solid #99f6e4}.bx:hover{background:#ccfbf1}
+.bc{background:var(–info-b);color:var(–info);border:1.5px solid #93c5fd}.bc:hover{background:#dbeafe}
 
 /* ── UPLOAD ── */
-.uz{border:2px dashed var(--g3);border-radius:var(--r);padding:24px 14px;text-align:center;cursor:pointer;background:var(--g1);position:relative;transition:all .2s}
-.uz:hover,.uz.do{border-color:var(--primary-l);background:var(--primary-b)}
+.uz{border:2px dashed var(–g3);border-radius:var(–r);padding:24px 14px;text-align:center;cursor:pointer;background:var(–g1);position:relative;transition:all .2s}
+.uz:hover,.uz.do{border-color:var(–primary-l);background:var(–primary-b)}
 .uz input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
-.uz .ic{margin-bottom:10px;display:flex;justify-content:center;color:var(--primary-l)}
-.uz p{font-size:.86rem;color:var(--g6)}
-.uz strong{color:var(--primary)}
-.ap{border:1.5px solid var(--g3);border-radius:var(--r);overflow:hidden;margin-bottom:6px}
-.ap .ah{background:var(--g2);padding:7px 12px;font-size:.76rem;font-weight:600;color:var(--g6);border-bottom:1px solid var(--g3)}
-.ap img{max-width:100%;max-height:160px;object-fit:contain;display:block;margin:0 auto;padding:6px;background:var(--g1)}
+.uz .ic{margin-bottom:10px;display:flex;justify-content:center;color:var(–primary-l)}
+.uz p{font-size:.86rem;color:var(–g6)}
+.uz strong{color:var(–primary)}
+.ap{border:1.5px solid var(–g3);border-radius:var(–r);overflow:hidden;margin-bottom:6px}
+.ap .ah{background:var(–g2);padding:7px 12px;font-size:.76rem;font-weight:600;color:var(–g6);border-bottom:1px solid var(–g3)}
+.ap img{max-width:100%;max-height:160px;object-fit:contain;display:block;margin:0 auto;padding:6px;background:var(–g1)}
 
 /* ── STATUS DOTS ── */
 .sd{width:8px;height:8px;border-radius:50%;display:inline-block}
-.sd.ok{background:var(--success)}.sd.wn{background:var(--warn)}.sd.er{background:var(--danger)}.sd.th{background:var(--info);animation:pulse 1s infinite}
+.sd.ok{background:var(–success)}.sd.wn{background:var(–warn)}.sd.er{background:var(–danger)}.sd.th{background:var(–info);animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
 /* ── TABLES ── */
 .ht{width:100%;border-collapse:collapse;font-size:.82rem}
-.ht th{background:var(--primary);color:#fff;padding:8px 10px;text-align:left;font-weight:600;font-size:.78rem;white-space:nowrap}
-.ht td{padding:7px 10px;border-bottom:1px solid var(--g2);vertical-align:middle}
+.ht th{background:var(–primary);color:#fff;padding:8px 10px;text-align:left;font-weight:600;font-size:.78rem;white-space:nowrap}
+.ht td{padding:7px 10px;border-bottom:1px solid var(–g2);vertical-align:middle}
 .ht tr:last-child td{border-bottom:none}
 .ht tr.recv td{background:#f8fbff}
 .ht tr.issu td{background:#fff8f8}
@@ -139,120 +140,120 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
 
 /* batch header row */
 .batch-hdr td{padding:0 !important}
-.batch-hdr:hover td{background:var(--g2) !important}
+.batch-hdr:hover td{background:var(–g2) !important}
 
 /* ── BADGES ── */
 .bg{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:.73rem;font-weight:600;white-space:nowrap}
-.rc{background:var(--info-b);color:var(--info)}
-.is{background:var(--danger-b);color:var(--danger)}
-.fm{background:var(--success-b);color:var(--success)}
-.ms{background:var(--warn-b);color:var(--warn)}
-.ma{background:var(--pb);color:var(--pu)}
+.rc{background:var(–info-b);color:var(–info)}
+.is{background:var(–danger-b);color:var(–danger)}
+.fm{background:var(–success-b);color:var(–success)}
+.ms{background:var(–warn-b);color:var(–warn)}
+.ma{background:var(–pb);color:var(–pu)}
 
 /* ── ENTRY LIST ── */
-.se-list{border:1.5px solid var(--g3);border-radius:var(--r);overflow:hidden}
-.se-item{border-bottom:1px solid var(--g2);padding:7px 12px;background:#fff;display:flex;align-items:center;gap:8px;transition:background .12s;min-height:42px}
+.se-list{border:1.5px solid var(–g3);border-radius:var(–r);overflow:hidden}
+.se-item{border-bottom:1px solid var(–g2);padding:7px 12px;background:#fff;display:flex;align-items:center;gap:8px;transition:background .12s;min-height:42px}
 .se-item:last-child{border-bottom:none}
-.se-item:hover{background:var(--g1)}
+.se-item:hover{background:var(–g1)}
 .se-item.has-val{background:#f0fdf4}
-.se-item.missing{background:var(--warn-b)}
+.se-item.missing{background:var(–warn-b)}
 .se-item .info{flex:1;min-width:0;overflow:hidden}
-.se-item .item-name{font-size:.83rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--g8);line-height:1.4}
-.se-item .item-code{font-size:.7rem;font-family:'IBM Plex Mono',monospace;color:var(--primary-l);display:block;margin-top:1px;opacity:.8}
-.se-qty{width:52px;padding:3px 5px;border:1.5px solid var(--g3);border-radius:5px;font-family:'IBM Plex Mono',monospace;font-size:.85rem;text-align:center;background:#fff;transition:border-color .15s;flex-shrink:0}
-.se-qty:focus{outline:none;border-color:var(--primary-l)}
-.se-qty.filled{border-color:var(--success);background:#f0fdf4;font-weight:700;color:var(--success)}
-.se-num{min-width:22px;text-align:right;font-size:.72rem;color:var(--g4);font-family:'IBM Plex Mono',monospace;flex-shrink:0}
+.se-item .item-name{font-size:.83rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(–g8);line-height:1.4}
+.se-item .item-code{font-size:.7rem;font-family:‘IBM Plex Mono’,monospace;color:var(–primary-l);display:block;margin-top:1px;opacity:.8}
+.se-qty{width:52px;padding:3px 5px;border:1.5px solid var(–g3);border-radius:5px;font-family:‘IBM Plex Mono’,monospace;font-size:.85rem;text-align:center;background:#fff;transition:border-color .15s;flex-shrink:0}
+.se-qty:focus{outline:none;border-color:var(–primary-l)}
+.se-qty.filled{border-color:var(–success);background:#f0fdf4;font-weight:700;color:var(–success)}
+.se-num{min-width:22px;text-align:right;font-size:.72rem;color:var(–g4);font-family:‘IBM Plex Mono’,monospace;flex-shrink:0}
 
 /* ── SEARCH RESULTS ── */
-.sr-list{border:1.5px solid var(--g3);border-radius:var(--r);max-height:200px;overflow-y:auto;background:#fff;margin-top:4px}
-.sr-row{padding:7px 11px;cursor:pointer;font-size:.82rem;border-bottom:1px solid var(--g2);display:flex;gap:8px;align-items:center}
-.sr-row:hover{background:var(--primary-b)}
+.sr-list{border:1.5px solid var(–g3);border-radius:var(–r);max-height:200px;overflow-y:auto;background:#fff;margin-top:4px}
+.sr-row{padding:7px 11px;cursor:pointer;font-size:.82rem;border-bottom:1px solid var(–g2);display:flex;gap:8px;align-items:center}
+.sr-row:hover{background:var(–primary-b)}
 .sr-row:last-child{border-bottom:none}
-.tpl-dd-item{padding:7px 14px;cursor:pointer;font-size:.84rem;border-bottom:1px solid var(--g2)}
-.tpl-dd-item:hover{background:var(--primary-b)}
-.tpl-dd-item.sel{background:var(--primary-b);color:var(--primary);font-weight:600}
+.tpl-dd-item{padding:7px 14px;cursor:pointer;font-size:.84rem;border-bottom:1px solid var(–g2)}
+.tpl-dd-item:hover{background:var(–primary-b)}
+.tpl-dd-item.sel{background:var(–primary-b);color:var(–primary);font-weight:600}
 .tpl-dd-item:last-child{border-bottom:none}
 
 /* ── MODAL ── */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center}
 .modal-bg.open{display:flex}
 .modal{background:#fff;border-radius:10px;width:520px;max-width:95vw;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25)}
-.modal .mh{display:flex;align-items:center;padding:14px 18px;border-bottom:1px solid var(--g3);gap:8px;background:var(--primary)}
+.modal .mh{display:flex;align-items:center;padding:14px 18px;border-bottom:1px solid var(–g3);gap:8px;background:var(–primary)}
 .modal .mt{font-size:.95rem;font-weight:700;color:#fff}
 .modal .mc{color:rgba(255,255,255,.7);cursor:pointer;margin-left:auto;font-size:1.1rem}
 .modal .mc:hover{color:#fff}
 .modal .mb2{padding:18px}
-.modal .mf{display:flex;gap:8px;justify-content:flex-end;padding:14px 18px;border-top:1px solid var(--g3)}
+.modal .mf{display:flex;gap:8px;justify-content:flex-end;padding:14px 18px;border-top:1px solid var(–g3)}
 
 /* ── INFO BOX ── */
-.ti{background:var(--info-b);border:1px solid #bfdbfe;border-radius:var(--r);padding:9px 13px;margin-bottom:10px;font-size:.79rem;color:var(--info)}
+.ti{background:var(–info-b);border:1px solid #bfdbfe;border-radius:var(–r);padding:9px 13px;margin-bottom:10px;font-size:.79rem;color:var(–info)}
 .ts{display:flex;gap:8px;flex-wrap:wrap;margin-top:5px}
-.ts span{background:#fff;border:1px solid #bfdbfe;border-radius:5px;padding:2px 8px;font-family:'IBM Plex Mono',monospace;font-size:.75rem}
+.ts span{background:#fff;border:1px solid #bfdbfe;border-radius:5px;padding:2px 8px;font-family:‘IBM Plex Mono’,monospace;font-size:.75rem}
 
 /* ── SPIN / TOAST ── */
 .spin{display:inline-block;width:13px;height:13px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
-.dot3::after{content:'...';animation:d3 1.4s infinite}
-@keyframes d3{0%{content:'.'}33%{content:'..'}66%{content:'...'}}
-.toast{position:fixed;bottom:20px;right:20px;z-index:999;background:var(--primary);color:#fff;padding:10px 16px;border-radius:var(--r);box-shadow:var(--sh2);font-weight:600;font-size:.85rem;transform:translateY(70px);opacity:0;transition:all .35s cubic-bezier(.34,1.56,.64,1);display:flex;align-items:center;gap:8px}
+.dot3::after{content:’…’;animation:d3 1.4s infinite}
+@keyframes d3{0%{content:’.’}33%{content:’..’}66%{content:’…’}}
+.toast{position:fixed;bottom:20px;right:20px;z-index:999;background:var(–primary);color:#fff;padding:10px 16px;border-radius:var(–r);box-shadow:var(–sh2);font-weight:600;font-size:.85rem;transform:translateY(70px);opacity:0;transition:all .35s cubic-bezier(.34,1.56,.64,1);display:flex;align-items:center;gap:8px}
 .toast.show{transform:translateY(0);opacity:1}
-.toast.er{background:var(--danger)}
-.toast.ok{background:var(--success)}
+.toast.er{background:var(–danger)}
+.toast.ok{background:var(–success)}
 
 ::-webkit-scrollbar{width:5px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--g3);border-radius:3px}
+::-webkit-scrollbar-thumb{background:var(–g3);border-radius:3px}
 /* EXTRA TABLES */
 .rt{width:100%;border-collapse:collapse;font-size:.82rem}
-.rt th{background:var(--primary);color:#fff;padding:8px 10px;text-align:left;font-weight:600;font-size:.75rem;white-space:nowrap}
-.rt td{padding:7px 10px;border-bottom:1px solid var(--g2);vertical-align:middle}
-.rt tr:hover td{background:var(--primary-b)}
-.rt tr.uc td{background:var(--warn-b)}
-.rt tr.nf td{background:var(--danger-b)}
+.rt th{background:var(–primary);color:#fff;padding:8px 10px;text-align:left;font-weight:600;font-size:.75rem;white-space:nowrap}
+.rt td{padding:7px 10px;border-bottom:1px solid var(–g2);vertical-align:middle}
+.rt tr:hover td{background:var(–primary-b)}
+.rt tr.uc td{background:var(–warn-b)}
+.rt tr.nf td{background:var(–danger-b)}
 
 .svt{width:100%;border-collapse:collapse;font-size:.79rem}
-.svt th{background:var(--primary);color:#fff;padding:7px 10px;white-space:nowrap;font-size:.74rem}
-.svt td{padding:6px 10px;border-bottom:1px solid var(--g2);vertical-align:middle}
-.svt tr:hover td{background:var(--primary-b)}
+.svt th{background:var(–primary);color:#fff;padding:7px 10px;white-space:nowrap;font-size:.74rem}
+.svt td{padding:6px 10px;border-bottom:1px solid var(–g2);vertical-align:middle}
+.svt tr:hover td{background:var(–primary-b)}
 
 /* INPUTS IN TABLE */
-.qi{width:64px;padding:5px 7px;border:1.5px solid var(--g3);border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:.85rem;text-align:center;background:#fff}
-.qi:focus{outline:none;border-color:var(--primary-l)}
-.qi.em{border-color:var(--warn);background:var(--warn-b)}
-.ci{width:100px;padding:4px 7px;border:1.5px solid var(--warn);border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:.8rem;background:var(--warn-b)}
-.ci:focus{outline:none;border-color:var(--primary-l);background:#fff}
-.tm{font-family:'IBM Plex Mono',monospace;font-size:.8rem}
+.qi{width:64px;padding:5px 7px;border:1.5px solid var(–g3);border-radius:6px;font-family:‘IBM Plex Mono’,monospace;font-size:.85rem;text-align:center;background:#fff}
+.qi:focus{outline:none;border-color:var(–primary-l)}
+.qi.em{border-color:var(–warn);background:var(–warn-b)}
+.ci{width:100px;padding:4px 7px;border:1.5px solid var(–warn);border-radius:6px;font-family:‘IBM Plex Mono’,monospace;font-size:.8rem;background:var(–warn-b)}
+.ci:focus{outline:none;border-color:var(–primary-l);background:#fff}
+.tm{font-family:‘IBM Plex Mono’,monospace;font-size:.8rem}
 
 /* legacy button aliases */
-.bp{background:var(--primary);color:#fff}.bp:hover{background:var(--primary-m)}.bp:disabled{background:var(--g4);cursor:not-allowed}
+.bp{background:var(–primary);color:#fff}.bp:hover{background:var(–primary-m)}.bp:disabled{background:var(–g4);cursor:not-allowed}
 .br{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;align-items:center}
 .ow{overflow-x:auto}
 
 /* TEMPLATE */
 .tpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-bottom:14px}
-.tpl-card{border:2px solid var(--g3);border-radius:var(--r);padding:12px;cursor:pointer;transition:all .2s;position:relative;background:#fff}
-.tpl-card:hover{border-color:var(--primary-l);background:var(--primary-b)}
-.tpl-card.sel{border-color:var(--primary);background:var(--primary-b);box-shadow:0 0 0 3px rgba(15,76,117,.15)}
-.tpl-card .tc2{font-size:.88rem;font-weight:700;color:var(--g8)}
-.tpl-card .ts2{font-size:.74rem;color:var(--g6);margin-top:2px}
-.tpl-card .cnt{position:absolute;top:8px;right:8px;background:var(--primary);color:#fff;border-radius:10px;padding:1px 7px;font-size:.72rem;font-weight:700}
-.tpl-card.add-new{border-style:dashed;border-color:var(--g4);display:flex;align-items:center;justify-content:center;gap:6px;color:var(--g6);font-weight:600;font-size:.86rem;min-height:68px}
-.tpl-card.add-new:hover{background:var(--primary-b);color:var(--primary)}
+.tpl-card{border:2px solid var(–g3);border-radius:var(–r);padding:12px;cursor:pointer;transition:all .2s;position:relative;background:#fff}
+.tpl-card:hover{border-color:var(–primary-l);background:var(–primary-b)}
+.tpl-card.sel{border-color:var(–primary);background:var(–primary-b);box-shadow:0 0 0 3px rgba(15,76,117,.15)}
+.tpl-card .tc2{font-size:.88rem;font-weight:700;color:var(–g8)}
+.tpl-card .ts2{font-size:.74rem;color:var(–g6);margin-top:2px}
+.tpl-card .cnt{position:absolute;top:8px;right:8px;background:var(–primary);color:#fff;border-radius:10px;padding:1px 7px;font-size:.72rem;font-weight:700}
+.tpl-card.add-new{border-style:dashed;border-color:var(–g4);display:flex;align-items:center;justify-content:center;gap:6px;color:var(–g6);font-weight:600;font-size:.86rem;min-height:68px}
+.tpl-card.add-new:hover{background:var(–primary-b);color:var(–primary)}
 /* ── Google Drive Sync ── */
-.gd-bar{display:flex;align-items:center;gap:10px;padding:7px 14px;background:#fff;border-bottom:1px solid var(--g3);font-size:.8rem;flex-wrap:wrap}
+.gd-bar{display:flex;align-items:center;gap:10px;padding:7px 14px;background:#fff;border-bottom:1px solid var(–g3);font-size:.8rem;flex-wrap:wrap}
 .gd-status{display:flex;align-items:center;gap:6px;padding:3px 10px;border-radius:14px;font-size:.75rem;font-weight:600;cursor:pointer;border:none;transition:all .2s}
 .gd-status.disconnected{background:#fef2f2;color:#b91c1c}
 .gd-status.connected{background:#f0fdf4;color:#15803d}
 .gd-status.syncing{background:#eff6ff;color:#1d4ed8}
-.gd-btn{padding:4px 12px;border-radius:6px;border:1px solid var(--g3);background:#fff;cursor:pointer;font-size:.76rem;font-weight:600;display:flex;align-items:center;gap:5px;transition:all .15s}
-.gd-btn:hover{background:var(--g1);border-color:var(--g4)}
-.gd-btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
-.gd-btn.primary:hover{background:var(--primary-d)}
+.gd-btn{padding:4px 12px;border-radius:6px;border:1px solid var(–g3);background:#fff;cursor:pointer;font-size:.76rem;font-weight:600;display:flex;align-items:center;gap:5px;transition:all .15s}
+.gd-btn:hover{background:var(–g1);border-color:var(–g4)}
+.gd-btn.primary{background:var(–primary);color:#fff;border-color:var(–primary)}
+.gd-btn.primary:hover{background:var(–primary-d)}
 .gd-btn:disabled{opacity:.45;cursor:not-allowed}
 .gd-setup-card{background:#f8faff;border:2px dashed #93c5fd;border-radius:10px;padding:20px;margin:12px 0;font-size:.85rem}
 .gd-step{display:flex;gap:10px;margin-bottom:12px;align-items:flex-start}
-.gd-step-num{background:var(--primary);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0;margin-top:1px}
+.gd-step-num{background:var(–primary);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0;margin-top:1px}
 .gd-sync-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px}
 .gd-sync-dot.ok{background:#15803d}
 .gd-sync-dot.err{background:#b91c1c}
@@ -265,28 +266,28 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
 
 /* template card action bar */
 .tpl-card-actions{
-  display:flex;gap:0;margin-top:8px;border-top:1px solid var(--g3);
-  padding-top:6px;
+display:flex;gap:0;margin-top:8px;border-top:1px solid var(–g3);
+padding-top:6px;
 }
 .tpl-card-actions span{
-  flex:1;display:flex;align-items:center;justify-content:center;gap:3px;
-  font-size:.7rem;font-weight:600;color:var(--g4);padding:3px 0;
-  cursor:pointer;border-radius:4px;transition:all .15s;
+flex:1;display:flex;align-items:center;justify-content:center;gap:3px;
+font-size:.7rem;font-weight:600;color:var(–g4);padding:3px 0;
+cursor:pointer;border-radius:4px;transition:all .15s;
 }
-.tpl-card-actions span:hover{background:var(--primary-b);color:var(--primary)}
-.tpl-card-actions span.del:hover{background:var(--danger-b);color:var(--danger)}
+.tpl-card-actions span:hover{background:var(–primary-b);color:var(–primary)}
+.tpl-card-actions span.del:hover{background:var(–danger-b);color:var(–danger)}
 
-.tpl-items{border:1px solid var(--g3);border-radius:var(--r);max-height:380px;overflow-y:auto}
-.tpl-row{display:flex;align-items:center;gap:8px;padding:7px 11px;border-bottom:1px solid var(--g2);font-size:.82rem}
+.tpl-items{border:1px solid var(–g3);border-radius:var(–r);max-height:380px;overflow-y:auto}
+.tpl-row{display:flex;align-items:center;gap:8px;padding:7px 11px;border-bottom:1px solid var(–g2);font-size:.82rem}
 .tpl-row:last-child{border-bottom:none}
-.tpl-row:hover{background:var(--g1)}
-.tpl-row .item-no{font-family:'IBM Plex Mono',monospace;font-size:.74rem;color:var(--info);background:var(--info-b);padding:1px 6px;border-radius:4px;white-space:nowrap}
-.tpl-row .item-no.empty{color:var(--g4);background:var(--g2)}
+.tpl-row:hover{background:var(–g1)}
+.tpl-row .item-no{font-family:‘IBM Plex Mono’,monospace;font-size:.74rem;color:var(–info);background:var(–info-b);padding:1px 6px;border-radius:4px;white-space:nowrap}
+.tpl-row .item-no.empty{color:var(–g4);background:var(–g2)}
 
 /* ENTRY LAYOUT */
 .entry-layout{display:grid;grid-template-columns:340px 1fr;gap:14px}
 @media(max-width:900px){.entry-layout{grid-template-columns:1fr}}
-.stock-entry-grid{display:flex;flex-direction:column;gap:0;border:1.5px solid var(--g3);border-radius:var(--r);overflow:hidden}
+.stock-entry-grid{display:flex;flex-direction:column;gap:0;border:1.5px solid var(–g3);border-radius:var(–r);overflow:hidden}
 
 /* HISTORY BATCH */
 .ht thead{position:sticky;top:0;z-index:2}
@@ -296,111 +297,110 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
 .ico{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
 .ico svg{display:block}
 .ch .ico svg{stroke:#fff;opacity:.85}
-.uz .ic svg{stroke:var(--primary-l)}
-
+.uz .ic svg{stroke:var(–primary-l)}
 
 .imp-chip {
-  position:relative;display:flex;align-items:center;gap:8px;
-  padding:8px 32px 8px 10px;border-radius:8px;cursor:pointer;
-  border:1.5px solid #bfdbfe;background:#fff;
-  font-size:.8rem;transition:all .12s;user-select:none;
-  width:100%;
+position:relative;display:flex;align-items:center;gap:8px;
+padding:8px 32px 8px 10px;border-radius:8px;cursor:pointer;
+border:1.5px solid #bfdbfe;background:#fff;
+font-size:.8rem;transition:all .12s;user-select:none;
+width:100%;
 }
-.imp-chip:hover:not(.have) { border-color:var(--primary);background:#eff6ff;box-shadow:0 0 0 2px rgba(59,130,246,.1); }
-.imp-chip.sel:not(.have) { border-color:var(--primary) !important;background:#dbeafe !important;font-weight:600; }
-.imp-chip.have { border-color:#e2e8f0;background:#f8fafc;color:var(--g4);cursor:default;opacity:.75; }
+.imp-chip:hover:not(.have) { border-color:var(–primary);background:#eff6ff;box-shadow:0 0 0 2px rgba(59,130,246,.1); }
+.imp-chip.sel:not(.have) { border-color:var(–primary) !important;background:#dbeafe !important;font-weight:600; }
+.imp-chip.have { border-color:#e2e8f0;background:#f8fafc;color:var(–g4);cursor:default;opacity:.75; }
 .imp-chip input[type=checkbox] { width:15px;height:15px;flex-shrink:0;cursor:pointer; }
-.imp-chip .chip-code { font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:#1d4ed8;background:#dbeafe;padding:1px 6px;border-radius:4px;white-space:nowrap;flex-shrink:0; }
+.imp-chip .chip-code { font-family:‘IBM Plex Mono’,monospace;font-size:.7rem;color:#1d4ed8;background:#dbeafe;padding:1px 6px;border-radius:4px;white-space:nowrap;flex-shrink:0; }
 .imp-chip .chip-name { flex:1;font-size:.8rem;line-height:1.3;color:#1e293b; }
 .imp-chip .color-dot {
-  position:absolute;top:5px;right:6px;
-  width:20px;height:20px;border-radius:6px;cursor:pointer;
-  border:1.5px solid rgba(0,0,0,.1);transition:all .15s;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+position:absolute;top:5px;right:6px;
+width:20px;height:20px;border-radius:6px;cursor:pointer;
+border:1.5px solid rgba(0,0,0,.1);transition:all .15s;
+display:flex;align-items:center;justify-content:center;flex-shrink:0;
 }
 .imp-chip .color-dot:hover { transform:scale(1.15);box-shadow:0 2px 8px rgba(0,0,0,.2); }
 .imp-chip .color-dot.unmarked { background:#f1f5f9;border-color:#cbd5e1; }
 .imp-chip .color-dot.marked { box-shadow:0 1px 5px rgba(0,0,0,.2);border-color:rgba(0,0,0,.15); }
 .chip-color-picker {
-  position:fixed;z-index:99999;background:#fff;border:1px solid var(--g3);
-  border-radius:10px;padding:10px;box-shadow:0 6px 28px rgba(0,0,0,.22);
-  display:grid;grid-template-columns:repeat(6,1fr);gap:5px;width:204px;
+position:fixed;z-index:99999;background:#fff;border:1px solid var(–g3);
+border-radius:10px;padding:10px;box-shadow:0 6px 28px rgba(0,0,0,.22);
+display:grid;grid-template-columns:repeat(6,1fr);gap:5px;width:204px;
 }
 .chip-color-picker .cp-swatch {
-  width:24px;height:24px;border-radius:5px;cursor:pointer;border:2px solid transparent;
-  transition:transform .12s,border-color .12s;
+width:24px;height:24px;border-radius:5px;cursor:pointer;border:2px solid transparent;
+transition:transform .12s,border-color .12s;
 }
 .chip-color-picker .cp-swatch:hover { transform:scale(1.25);border-color:#1d4ed8; }
 .chip-color-picker .cp-clear {
-  grid-column: span 6;
-  height:26px;border-radius:5px;cursor:pointer;border:1.5px solid #e2e8f0;
-  background:#f8fafc;display:flex;align-items:center;justify-content:center;
-  font-size:.74rem;color:#94a3b8;gap:4px;margin-top:2px;
+grid-column: span 6;
+height:26px;border-radius:5px;cursor:pointer;border:1.5px solid #e2e8f0;
+background:#f8fafc;display:flex;align-items:center;justify-content:center;
+font-size:.74rem;color:#94a3b8;gap:4px;margin-top:2px;
 }
 .chip-color-picker .cp-clear:hover { border-color:#ef4444;color:#ef4444;background:#fff1f2; }
 
 /* ── PIN Screen ──────────────────────────── */
 #pinScreen {
-  position:fixed;inset:0;z-index:99999;
-  display:flex;font-family:'Sarabun',sans-serif;background:#fff;
+position:fixed;inset:0;z-index:99999;
+display:flex;font-family:‘Sarabun’,sans-serif;background:#fff;
 }
 #pinScreen.hidden { display:none; }
 .pin-left {
-  width:45%;background:#1a237e;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:48px;position:relative;overflow:hidden;border-radius:0 32px 32px 0;
+width:45%;background:#1a237e;
+display:flex;flex-direction:column;align-items:center;justify-content:center;
+padding:48px;position:relative;overflow:hidden;border-radius:0 32px 32px 0;
 }
 .pin-left::before {
-  content:'';position:absolute;top:-60px;left:-60px;width:280px;height:280px;
-  border-radius:50%;background:rgba(255,255,255,.06);
+content:’’;position:absolute;top:-60px;left:-60px;width:280px;height:280px;
+border-radius:50%;background:rgba(255,255,255,.06);
 }
 .pin-left::after {
-  content:'';position:absolute;bottom:-40px;right:-40px;width:200px;height:200px;
-  border-radius:50%;background:rgba(255,255,255,.04);
+content:’’;position:absolute;bottom:-40px;right:-40px;width:200px;height:200px;
+border-radius:50%;background:rgba(255,255,255,.04);
 }
 .pin-illustration {
-  width:200px;height:200px;background:rgba(255,255,255,.12);border-radius:50%;
-  display:flex;align-items:center;justify-content:center;margin-bottom:28px;
-  position:relative;z-index:1;
+width:200px;height:200px;background:rgba(255,255,255,.12);border-radius:50%;
+display:flex;align-items:center;justify-content:center;margin-bottom:28px;
+position:relative;z-index:1;
 }
 .pin-ill-deco {
-  position:absolute;border-radius:8px;
+position:absolute;border-radius:8px;
 }
 .pin-left-title {
-  font-size:1.1rem;font-weight:700;color:#fff;text-align:center;margin-bottom:6px;
-  position:relative;z-index:1;
+font-size:1.1rem;font-weight:700;color:#fff;text-align:center;margin-bottom:6px;
+position:relative;z-index:1;
 }
 .pin-left-sub { font-size:.8rem;color:rgba(255,255,255,.6);text-align:center;position:relative;z-index:1; }
 .pin-right {
-  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:48px 56px;
+flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+padding:48px 56px;
 }
 .pin-right-title { font-size:1.6rem;font-weight:800;color:#1a237e;margin-bottom:6px;align-self:flex-start; }
 .pin-right-sub { font-size:.8rem;color:#94a3b8;margin-bottom:28px;align-self:flex-start; }
 .pin-field-label { font-size:.75rem;color:#64748b;font-weight:600;margin-bottom:5px;display:block;align-self:flex-start;width:100%; }
 .pin-input-wrap {
-  width:100%;position:relative;margin-bottom:18px;
+width:100%;position:relative;margin-bottom:18px;
 }
 .pin-text-input {
-  width:100%;padding:12px 44px 12px 16px;border:1.5px solid #e2e8f0;border-radius:10px;
-  font-size:1rem;font-family:'Sarabun',sans-serif;color:#1e293b;outline:none;
-  box-sizing:border-box;transition:border .15s;background:#f8fafc;
-  letter-spacing:6px;text-align:center;font-size:1.3rem;
+width:100%;padding:12px 44px 12px 16px;border:1.5px solid #e2e8f0;border-radius:10px;
+font-size:1rem;font-family:‘Sarabun’,sans-serif;color:#1e293b;outline:none;
+box-sizing:border-box;transition:border .15s;background:#f8fafc;
+letter-spacing:6px;text-align:center;font-size:1.3rem;
 }
 .pin-text-input:focus { border-color:#1a237e;background:#fff; }
 .pin-text-input.error { border-color:#ef4444;animation:shake .3s; }
 .pin-eye-btn {
-  position:absolute;right:12px;top:50%;transform:translateY(-50%);
-  background:none;border:none;cursor:pointer;color:#94a3b8;padding:4px;
+position:absolute;right:12px;top:50%;transform:translateY(-50%);
+background:none;border:none;cursor:pointer;color:#94a3b8;padding:4px;
 }
 .pin-submit {
-  width:100%;padding:14px;background:#1a237e;color:#fff;border:none;border-radius:10px;
-  font-size:1rem;font-weight:700;cursor:pointer;font-family:'Sarabun',sans-serif;
-  transition:background .15s;margin-bottom:18px;
+width:100%;padding:14px;background:#1a237e;color:#fff;border:none;border-radius:10px;
+font-size:1rem;font-weight:700;cursor:pointer;font-family:‘Sarabun’,sans-serif;
+transition:background .15s;margin-bottom:18px;
 }
 .pin-submit:hover { background:#283593; }
 .pin-divider { display:flex;align-items:center;gap:12px;width:100%;margin-bottom:16px; }
-.pin-divider::before,.pin-divider::after { content:'';flex:1;height:1px;background:#e2e8f0; }
+.pin-divider::before,.pin-divider::after { content:’’;flex:1;height:1px;background:#e2e8f0; }
 .pin-divider span { font-size:.75rem;color:#94a3b8;white-space:nowrap; }
 .pin-msg { font-size:.78rem;min-height:18px;color:#ef4444;margin-bottom:8px;text-align:center;width:100%; }
 .pin-change-link { font-size:.75rem;color:#94a3b8;cursor:pointer;text-align:center;width:100%; }
@@ -408,11 +408,13 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
 .pin-change-link span:hover { color:#283593; }
 @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
 @media(max-width:640px){
-  .pin-left{display:none;}
-  .pin-right{padding:32px 28px;}
+.pin-left{display:none;}
+.pin-right{padding:32px 28px;}
 }
 </style>
+
   <!-- Firebase SDK -->
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -490,7 +492,9 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
 
       // Show sync indicator
       const dot = document.getElementById('fbSyncDot');
+      const txt = document.getElementById('fbSyncTxt');
       if (dot) { dot.style.background = '#22c55e'; dot.title = 'เชื่อมต่อ Firebase แล้ว'; }
+      if (txt) txt.textContent = 'เชื่อมต่อแล้ว ✓';
 
       // ── Listen for realtime changes from other devices ──
       window._fbListen('orSE', val => {
@@ -528,10 +532,12 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
       });
     });
   </script>
+
 </head>
 <body>
 
 <!-- SVG SPRITE -->
+
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
   <symbol id="ic-entry" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -623,9 +629,16 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
 
 </header>
 
-<!-- Google Drive Sync Bar -->
-<div class="gd-bar" id="gdBar">
-  <svg width="16" height="16" viewBox="0 0 87.3 78" style="flex-shrink:0">
+<!-- Sync Bar -->
+
+<div class="gd-bar" id="gdBar" style="background:var(--primary);padding:5px 16px">
+  <span style="font-weight:600;color:rgba(255,255,255,.8);font-size:.79rem">🔥 Firebase</span>
+  <span id="fbSyncDot" title="กำลังเชื่อมต่อ..." style="width:8px;height:8px;border-radius:50%;background:#f59e0b;display:inline-block;margin-left:8px;flex-shrink:0;transition:background .3s"></span>
+  <span id="fbSyncTxt" style="font-size:.73rem;color:rgba(255,255,255,.6);margin-left:5px;margin-right:14px">กำลังเชื่อมต่อ...</span>
+
+  <!-- Google Drive -->
+
+  <svg width="14" height="14" viewBox="0 0 87.3 78" style="flex-shrink:0;margin-right:5px">
     <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
     <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/>
     <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/>
@@ -633,28 +646,21 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
     <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
     <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
   </svg>
-  <span style="font-weight:600;color:var(--g6);font-size:.79rem">Google Drive</span>
-  <button class="gd-status disconnected" id="gdStatusBtn" onclick="gdToggleConnect()">
+  <button class="gd-status disconnected" id="gdStatusBtn" onclick="gdToggleConnect()" style="font-size:.73rem;padding:3px 9px">
     <span class="gd-sync-dot err" id="gdDot"></span>
     <span id="gdStatusTxt">ยังไม่เชื่อมต่อ</span>
   </button>
+  <button style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:4px 10px;cursor:pointer;color:#fff;font-size:.72rem;margin-left:5px;font-family:'Sarabun',sans-serif" id="gdSaveBtn" onclick="gdSaveNow()" title="Backup ไป Google Drive">
+    💾 Backup
+  </button>
+  <button style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:4px 10px;cursor:pointer;color:#fff;font-size:.72rem;margin-left:5px;font-family:'Sarabun',sans-serif" id="gdLoadBtn" onclick="gdLoadLatest()" title="Restore จาก Google Drive">
+    📥 Restore
+  </button>
+  <span id="gdLastSync" style="font-size:.71rem;color:rgba(255,255,255,.5);margin-left:8px"></span>
+
   <div class="sp"></div>
-  <span id="gdLastSync" style="font-size:.73rem;color:var(--g4)"></span>
-  <button class="gd-btn" id="gdSaveBtn" onclick="gdSaveNow()" disabled title="บันทึกไป Drive">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-    Backup
-  </button>
-  <button class="gd-btn" id="gdLoadBtn" onclick="gdLoadLatest()" disabled title="โหลดจาก Drive">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>
-    Restore
-  </button>
-  <!-- Firebase sync indicator -->
-  <span id="fbSyncDot" title="กำลังเชื่อมต่อ Firebase..." style="width:8px;height:8px;border-radius:50%;background:#f59e0b;display:inline-block;margin-right:6px;flex-shrink:0;transition:background .3s"></span>
-  <button onclick="window._reloadAppData&&window._reloadAppData()" title="ซิงค์จาก Firebase" style="background:none;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:4px 8px;cursor:pointer;color:rgba(255,255,255,.7);font-size:.72rem;margin-right:4px;font-family:'Sarabun',sans-serif">🔄</button>
-  <button onclick="openChangePin()" title="เปลี่ยน PIN" style="background:none;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:4px 8px;cursor:pointer;color:rgba(255,255,255,.7);font-size:.72rem;margin-right:4px;font-family:'Sarabun',sans-serif">🔑 PIN</button>
-  <button class="gd-btn" onclick="openGDriveSetup()" title="ตั้งค่า" style="padding:4px 8px">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-  </button>
+  <button onclick="window._reloadAppData&&window._reloadAppData()" title="ซิงค์จาก Firebase" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:4px 10px;cursor:pointer;color:#fff;font-size:.72rem;margin-right:6px;font-family:'Sarabun',sans-serif">🔄 ซิงค์</button>
+  <button onclick="openChangePin()" title="เปลี่ยน PIN" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:4px 10px;cursor:pointer;color:#fff;font-size:.72rem;font-family:'Sarabun',sans-serif">🔑 PIN</button>
 </div>
 
 <div class="con">
@@ -683,6 +689,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
   </div>
 
   <!-- TABS -->
+
   <div class="tabs">
     <div class="tab ac" onclick="swTab('entry')"><span class="ico"><svg width="15" height="15"><use href="#ic-entry"/></svg></span> บันทึกรับ/จ่าย</div>
     <div class="tab" onclick="swTab('ai')"><span class="ico"><svg width="15" height="15"><use href="#ic-ai"/></svg></span> AI อ่านภาพ</div>
@@ -693,6 +700,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
   </div>
 
   <!-- ===== TAB: ENTRY ===== -->
+
   <div id="tentry" class="tc ac">
     <div class="entry-layout">
       <!-- LEFT: Form -->
@@ -742,78 +750,82 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
           </div>
         </div>
 
-        <!-- Search & Add -->
-        <div class="card">
-          <div class="ch"><span class="ico"><svg width="15" height="15"><use href="#ic-search"/></svg></span><h2>เพิ่มรายการ</h2></div>
-          <div class="cb">
-            <!-- Tab switcher -->
-            <div id="tplTabBar" style="display:flex;border-bottom:2px solid var(--g3);margin-bottom:10px">
-              <button id="entTabSearch" onclick="swEntTab('search')"
-                style="flex:1;padding:6px 0;border:none;background:none;cursor:pointer;font-size:.8rem;font-weight:700;font-family:'Sarabun',sans-serif;color:var(--primary);border-bottom:2px solid var(--primary);margin-bottom:-2px">
-                🔍 ค้นหารายการ
-              </button>
-              <button id="entTabTpl" onclick="swEntTab('tpl')"
-                style="flex:1;padding:6px 0;border:none;background:none;cursor:pointer;font-size:.8rem;font-weight:700;font-family:'Sarabun',sans-serif;color:var(--g4);border-bottom:2px solid transparent;margin-bottom:-2px">
-                📋 จาก Template
-              </button>
-            </div>
-            <!-- Search pane -->
-            <div id="entPaneSearch">
-              <input type="text" id="entSearch" placeholder="พิมพ์รหัส MS#### หรือชื่อรายการ..." oninput="searchEntry(this.value)">
-              <div id="entSearchRes" class="sr-list" style="display:none"></div>
-              <div style="margin-top:8px;font-size:.76rem;color:var(--g4)">
-                หรือเพิ่มรายการที่ไม่อยู่ในระบบ:
-                <span style="color:var(--bl);cursor:pointer;text-decoration:underline" onclick="addCustomItem()">+ เพิ่มรายการพิเศษ</span>
-              </div>
-            </div>
-            <!-- From template pane -->
-            <div id="entPaneTpl" style="display:none">
-              <div style="display:flex;gap:6px;margin-bottom:8px">
-                <select id="entTplCat" onchange="renderEntTplList()" style="font-size:.8rem;padding:4px 6px;flex:1">
-                  <option value="">— ทุกหมวด —</option>
-                </select>
-                <input type="text" id="entTplQ" placeholder="🔍 ค้นหา..." oninput="renderEntTplList()" style="font-size:.8rem;padding:4px 6px;flex:1">
-              </div>
-              <div id="entTplList" style="max-height:340px;overflow-y:auto;border:1px solid var(--g3);border-radius:6px"></div>
-            </div>
+```
+    <!-- Search & Add -->
+    <div class="card">
+      <div class="ch"><span class="ico"><svg width="15" height="15"><use href="#ic-search"/></svg></span><h2>เพิ่มรายการ</h2></div>
+      <div class="cb">
+        <!-- Tab switcher -->
+        <div id="tplTabBar" style="display:flex;border-bottom:2px solid var(--g3);margin-bottom:10px">
+          <button id="entTabSearch" onclick="swEntTab('search')"
+            style="flex:1;padding:6px 0;border:none;background:none;cursor:pointer;font-size:.8rem;font-weight:700;font-family:'Sarabun',sans-serif;color:var(--primary);border-bottom:2px solid var(--primary);margin-bottom:-2px">
+            🔍 ค้นหารายการ
+          </button>
+          <button id="entTabTpl" onclick="swEntTab('tpl')"
+            style="flex:1;padding:6px 0;border:none;background:none;cursor:pointer;font-size:.8rem;font-weight:700;font-family:'Sarabun',sans-serif;color:var(--g4);border-bottom:2px solid transparent;margin-bottom:-2px">
+            📋 จาก Template
+          </button>
+        </div>
+        <!-- Search pane -->
+        <div id="entPaneSearch">
+          <input type="text" id="entSearch" placeholder="พิมพ์รหัส MS#### หรือชื่อรายการ..." oninput="searchEntry(this.value)">
+          <div id="entSearchRes" class="sr-list" style="display:none"></div>
+          <div style="margin-top:8px;font-size:.76rem;color:var(--g4)">
+            หรือเพิ่มรายการที่ไม่อยู่ในระบบ:
+            <span style="color:var(--bl);cursor:pointer;text-decoration:underline" onclick="addCustomItem()">+ เพิ่มรายการพิเศษ</span>
           </div>
         </div>
-      </div>
-
-      <!-- RIGHT: Items to enter -->
-      <div>
-        <div class="card" style="min-height:400px;display:flex;flex-direction:column">
-          <div class="ch" style="flex-wrap:wrap;gap:4px">
-            <span class="ico"><svg width="15" height="15"><use href="#ic-clip"/></svg></span>
-            <h2>รายการที่จะบันทึก</h2>
-            <div class="sp"></div>
-            <span id="entryCount" style="font-size:.78rem;color:var(--g6);font-weight:600">0 รายการ</span>
+        <!-- From template pane -->
+        <div id="entPaneTpl" style="display:none">
+          <div style="display:flex;gap:6px;margin-bottom:8px">
+            <select id="entTplCat" onchange="renderEntTplList()" style="font-size:.8rem;padding:4px 6px;flex:1">
+              <option value="">— ทุกหมวด —</option>
+            </select>
+            <input type="text" id="entTplQ" placeholder="🔍 ค้นหา..." oninput="renderEntTplList()" style="font-size:.8rem;padding:4px 6px;flex:1">
           </div>
-          <div id="caseLabelBar" style="display:none;padding:5px 14px 8px;border-bottom:1px solid var(--g2);background:var(--g1)">
-            <span style="font-size:.72rem;color:var(--g4);margin-right:4px">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-              ชื่อเคส:
-            </span>
-            <span id="caseLabelPreview" style="font-size:.8rem;font-weight:600;color:var(--primary)"></span>
-          </div>
-          <div class="cb">
-            <div id="entryItems" style="max-height:480px;overflow-y:auto;">
-              <div style="text-align:center;padding:40px;color:var(--g4)">
-                <div style="margin-bottom:12px;opacity:.35"><span class="ico"><svg width="48" height="48"><use href="#ic-clip"/></svg></span></div>
-                <div style="font-size:.9rem">เลือก Template อาจารย์<br>หรือค้นหาและเพิ่มรายการ</div>
-              </div>
-            </div>
-            <div class="br" id="entryBtns" style="display:none">
-              <button class="btn bsv" onclick="saveEntry()"><span class="ico"><svg width="14" height="14"><use href="#ic-save"/></svg></span> บันทึก</button>
-              <button class="btn bs" onclick="clearEntry()"><span class="ico"><svg width="14" height="14"><use href="#ic-trash"/></svg></span> ล้างทั้งหมด</button>
-            </div>
-          </div>
+          <div id="entTplList" style="max-height:340px;overflow-y:auto;border:1px solid var(--g3);border-radius:6px"></div>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- RIGHT: Items to enter -->
+  <div>
+    <div class="card" style="min-height:400px;display:flex;flex-direction:column">
+      <div class="ch" style="flex-wrap:wrap;gap:4px">
+        <span class="ico"><svg width="15" height="15"><use href="#ic-clip"/></svg></span>
+        <h2>รายการที่จะบันทึก</h2>
+        <div class="sp"></div>
+        <span id="entryCount" style="font-size:.78rem;color:var(--g6);font-weight:600">0 รายการ</span>
+      </div>
+      <div id="caseLabelBar" style="display:none;padding:5px 14px 8px;border-bottom:1px solid var(--g2);background:var(--g1)">
+        <span style="font-size:.72rem;color:var(--g4);margin-right:4px">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          ชื่อเคส:
+        </span>
+        <span id="caseLabelPreview" style="font-size:.8rem;font-weight:600;color:var(--primary)"></span>
+      </div>
+      <div class="cb">
+        <div id="entryItems" style="max-height:480px;overflow-y:auto;">
+          <div style="text-align:center;padding:40px;color:var(--g4)">
+            <div style="margin-bottom:12px;opacity:.35"><span class="ico"><svg width="48" height="48"><use href="#ic-clip"/></svg></span></div>
+            <div style="font-size:.9rem">เลือก Template อาจารย์<br>หรือค้นหาและเพิ่มรายการ</div>
+          </div>
+        </div>
+        <div class="br" id="entryBtns" style="display:none">
+          <button class="btn bsv" onclick="saveEntry()"><span class="ico"><svg width="14" height="14"><use href="#ic-save"/></svg></span> บันทึก</button>
+          <button class="btn bs" onclick="clearEntry()"><span class="ico"><svg width="14" height="14"><use href="#ic-trash"/></svg></span> ล้างทั้งหมด</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+  </div>
+
   <!-- ===== TAB: AI ===== -->
+
   <div id="tai" class="tc">
     <div class="card">
       <div class="ch">
@@ -821,52 +833,56 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
       </div>
       <div class="cb">
 
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px">
-          <div><label>📅 วันที่</label><input type="date" id="aiDate"></div>
-          <div>
-            <label>ประเภท</label>
-            <div class="tt">
-              <button class="tb recv ac" id="aiBtnR" onclick="setAiT('receive')"><span class="ico"><svg width="14" height="14"><use href="#ic-recv"/></svg></span> รับ</button>
-              <button class="tb issu" id="aiBtnI" onclick="setAiT('issue')"><span class="ico"><svg width="14" height="14"><use href="#ic-issue"/></svg></span> จ่าย</button>
-            </div>
-          </div>
-          <div>
-            <label>Template อาจารย์ (ใช้ตรวจสอบ)</label>
-            <select id="aiDoc"><option value="">— ไม่ระบุ —</option></select>
-          </div>
-        </div>
-        <div class="uz" id="uz">
-          <input type="file" id="fi" accept="image/*" multiple onchange="hFiles(this.files)">
-          <div class="ic"><span class="ico"><svg width="40" height="40"><use href="#ic-image"/></svg></span></div>
-          <p><strong>คลิกเพื่อเลือกภาพ</strong> หรือลากมาวาง</p>
-          <p style="font-size:.74rem;margin-top:4px;color:var(--g4)">รองรับ JPG, PNG — อัพโหลดหลายภาพได้</p>
-        </div>
-        <div id="pl" style="display:none;margin-top:10px"></div>
-        <div class="br">
-          <button class="btn bp" id="btnA" onclick="analyze()" disabled><span class="ico"><svg width="14" height="14"><use href="#ic-analyze"/></svg></span> วิเคราะห์ด้วย AI</button>
-          <button class="btn bs" onclick="clearAll()"><span class="ico"><svg width="14" height="14"><use href="#ic-trash"/></svg></span> ล้าง</button>
+```
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px">
+      <div><label>📅 วันที่</label><input type="date" id="aiDate"></div>
+      <div>
+        <label>ประเภท</label>
+        <div class="tt">
+          <button class="tb recv ac" id="aiBtnR" onclick="setAiT('receive')"><span class="ico"><svg width="14" height="14"><use href="#ic-recv"/></svg></span> รับ</button>
+          <button class="tb issu" id="aiBtnI" onclick="setAiT('issue')"><span class="ico"><svg width="14" height="14"><use href="#ic-issue"/></svg></span> จ่าย</button>
         </div>
       </div>
+      <div>
+        <label>Template อาจารย์ (ใช้ตรวจสอบ)</label>
+        <select id="aiDoc"><option value="">— ไม่ระบุ —</option></select>
+      </div>
     </div>
+    <div class="uz" id="uz">
+      <input type="file" id="fi" accept="image/*" multiple onchange="hFiles(this.files)">
+      <div class="ic"><span class="ico"><svg width="40" height="40"><use href="#ic-image"/></svg></span></div>
+      <p><strong>คลิกเพื่อเลือกภาพ</strong> หรือลากมาวาง</p>
+      <p style="font-size:.74rem;margin-top:4px;color:var(--g4)">รองรับ JPG, PNG — อัพโหลดหลายภาพได้</p>
+    </div>
+    <div id="pl" style="display:none;margin-top:10px"></div>
+    <div class="br">
+      <button class="btn bp" id="btnA" onclick="analyze()" disabled><span class="ico"><svg width="14" height="14"><use href="#ic-analyze"/></svg></span> วิเคราะห์ด้วย AI</button>
+      <button class="btn bs" onclick="clearAll()"><span class="ico"><svg width="14" height="14"><use href="#ic-trash"/></svg></span> ล้าง</button>
+    </div>
+  </div>
+</div>
 
-    <div id="ra" style="display:none">
-      <div class="card">
-        <div class="ch">
-          <span id="rsd" class="sd ok"></span>
-          <h2 id="rt2">ผลการวิเคราะห์</h2>
-        </div>
-        <div class="cb">
-          <div id="rc"></div>
-          <div class="br" id="sr" style="display:none">
-            <button class="btn bsv" onclick="saveAiEntries()"><span class="ico"><svg width="14" height="14"><use href="#ic-save"/></svg></span> บันทึกรายการ</button>
-            <button class="btn bs" onclick="clearRes()"><span class="ico"><svg width="14" height="14"><use href="#ic-undo"/></svg></span> ล้างผล</button>
-          </div>
-        </div>
+<div id="ra" style="display:none">
+  <div class="card">
+    <div class="ch">
+      <span id="rsd" class="sd ok"></span>
+      <h2 id="rt2">ผลการวิเคราะห์</h2>
+    </div>
+    <div class="cb">
+      <div id="rc"></div>
+      <div class="br" id="sr" style="display:none">
+        <button class="btn bsv" onclick="saveAiEntries()"><span class="ico"><svg width="14" height="14"><use href="#ic-save"/></svg></span> บันทึกรายการ</button>
+        <button class="btn bs" onclick="clearRes()"><span class="ico"><svg width="14" height="14"><use href="#ic-undo"/></svg></span> ล้างผล</button>
       </div>
     </div>
   </div>
+</div>
+```
+
+  </div>
 
   <!-- ===== TAB: TEMPLATE ===== -->
+
   <div id="ttpl" class="tc">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
       <!-- Left: Doctor list with collapsible categories -->
@@ -888,155 +904,163 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
         </div>
       </div>
 
-      <!-- Right: Template items -->
-      <div>
-        <div class="card" id="tplEditCard" style="display:none">
-          <div class="ch">
-            <span class="ico"><svg width="15" height="15"><use href="#ic-clip"/></svg></span>
-            <h2 id="tplEditName">Template</h2>
-            <div class="sp"></div>
-            <button id="tplRenameBtn" class="btn bs" style="padding:4px 10px;font-size:.78rem" onclick="renameDoc()" title="แก้ไขชื่อ">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              แก้ชื่อ
-            </button>
-            <button class="btn bs" style="padding:4px 10px;font-size:.78rem" onclick="duplicateDoc()" title="ทำสำเนา">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-              สำเนา
-            </button>
-            <button id="tplSaveBtn" class="btn bsu" style="padding:4px 12px;font-size:.78rem;background:var(--success);color:#fff;border-color:var(--success)" onclick="saveTplConfirm()" title="บันทึก Template">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:3px"><polyline points="20 6 9 17 4 12"/></svg>
-              บันทึก
-            </button>
-            <button id="tplDeleteBtn" class="btn bd" style="padding:4px 10px;font-size:.78rem" onclick="deleteDoc()"><span class="ico"><svg width="14" height="14"><use href="#ic-trash"/></svg></span> ลบ</button>
-          </div>
-          <div class="cb">
-            <!-- Tab switcher -->
-            <div style="display:flex;border-bottom:2px solid var(--g3);margin-bottom:10px">
-              <button id="tplTabSearch" onclick="swTplTab('search')"
-                style="flex:1;padding:6px 0;border:none;background:none;cursor:pointer;font-size:.82rem;font-weight:700;font-family:'Sarabun',sans-serif;color:var(--primary);border-bottom:2px solid var(--primary);margin-bottom:-2px">
-                🔍 ค้นหารายการ
-              </button>
-              <button id="tplTabImport" onclick="swTplTab('import')"
-                style="flex:1;padding:6px 0;border:none;background:none;cursor:pointer;font-size:.82rem;font-weight:700;font-family:'Sarabun',sans-serif;color:var(--g4);border-bottom:2px solid transparent;margin-bottom:-2px">
-                📋 จาก Template
-              </button>
-            </div>
-            <!-- Search pane -->
-            <div id="tplPaneSearch">
-              <input type="text" id="tplSearch" placeholder="🔍 พิมพ์รหัส MS#### หรือชื่อรายการ..." oninput="searchTpl(this.value)">
-              <div id="tplSearchRes" class="sr-list" style="display:none;margin-top:4px"></div>
-              <div style="display:none;margin-top:6px;font-size:.76rem;color:var(--g4)"></div>
-            </div>
-            <!-- Import from template pane -->
-            <div id="tplPaneImport" style="display:none">
-              <div style="display:flex;gap:6px;margin-bottom:8px">
-                <select id="inlineTplCat" onchange="renderInlineTplList()" style="font-size:.8rem;padding:4px 6px;flex:1">
-                  <option value="">— ทุกหมวด —</option>
-                </select>
-                <input type="text" id="inlineTplQ" placeholder="🔍 ค้นหา..." oninput="renderInlineTplList()" style="font-size:.8rem;padding:4px 6px;flex:1">
-              </div>
-              <div id="inlineTplList" style="max-height:320px;overflow-y:auto;border:1px solid var(--g3);border-radius:6px"></div>
-            </div>
-            <div id="tplItems" class="tpl-items" style="margin-top:10px">
-              <div style="text-align:center;padding:24px;color:var(--g4);font-size:.86rem">ยังไม่มีรายการ</div>
-            </div>
-          </div>
+```
+  <!-- Right: Template items -->
+  <div>
+    <div class="card" id="tplEditCard" style="display:none">
+      <div class="ch">
+        <span class="ico"><svg width="15" height="15"><use href="#ic-clip"/></svg></span>
+        <h2 id="tplEditName">Template</h2>
+        <div class="sp"></div>
+        <button id="tplRenameBtn" class="btn bs" style="padding:4px 10px;font-size:.78rem" onclick="renameDoc()" title="แก้ไขชื่อ">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          แก้ชื่อ
+        </button>
+        <button class="btn bs" style="padding:4px 10px;font-size:.78rem" onclick="duplicateDoc()" title="ทำสำเนา">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          สำเนา
+        </button>
+        <button id="tplSaveBtn" class="btn bsu" style="padding:4px 12px;font-size:.78rem;background:var(--success);color:#fff;border-color:var(--success)" onclick="saveTplConfirm()" title="บันทึก Template">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:3px"><polyline points="20 6 9 17 4 12"/></svg>
+          บันทึก
+        </button>
+        <button id="tplDeleteBtn" class="btn bd" style="padding:4px 10px;font-size:.78rem" onclick="deleteDoc()"><span class="ico"><svg width="14" height="14"><use href="#ic-trash"/></svg></span> ลบ</button>
+      </div>
+      <div class="cb">
+        <!-- Tab switcher -->
+        <div style="display:flex;border-bottom:2px solid var(--g3);margin-bottom:10px">
+          <button id="tplTabSearch" onclick="swTplTab('search')"
+            style="flex:1;padding:6px 0;border:none;background:none;cursor:pointer;font-size:.82rem;font-weight:700;font-family:'Sarabun',sans-serif;color:var(--primary);border-bottom:2px solid var(--primary);margin-bottom:-2px">
+            🔍 ค้นหารายการ
+          </button>
+          <button id="tplTabImport" onclick="swTplTab('import')"
+            style="flex:1;padding:6px 0;border:none;background:none;cursor:pointer;font-size:.82rem;font-weight:700;font-family:'Sarabun',sans-serif;color:var(--g4);border-bottom:2px solid transparent;margin-bottom:-2px">
+            📋 จาก Template
+          </button>
         </div>
-        <div id="tplEditEmpty" class="card">
-          <div class="cb" style="text-align:center;padding:40px;color:var(--g4)">
-            <div style="font-size:2.5rem;margin-bottom:10px">👈</div>
-            <div>เลือกอาจารย์เพื่อแก้ไข Template</div>
+        <!-- Search pane -->
+        <div id="tplPaneSearch">
+          <input type="text" id="tplSearch" placeholder="🔍 พิมพ์รหัส MS#### หรือชื่อรายการ..." oninput="searchTpl(this.value)">
+          <div id="tplSearchRes" class="sr-list" style="display:none;margin-top:4px"></div>
+          <div style="display:none;margin-top:6px;font-size:.76rem;color:var(--g4)"></div>
+        </div>
+        <!-- Import from template pane -->
+        <div id="tplPaneImport" style="display:none">
+          <div style="display:flex;gap:6px;margin-bottom:8px">
+            <select id="inlineTplCat" onchange="renderInlineTplList()" style="font-size:.8rem;padding:4px 6px;flex:1">
+              <option value="">— ทุกหมวด —</option>
+            </select>
+            <input type="text" id="inlineTplQ" placeholder="🔍 ค้นหา..." oninput="renderInlineTplList()" style="font-size:.8rem;padding:4px 6px;flex:1">
           </div>
+          <div id="inlineTplList" style="max-height:320px;overflow-y:auto;border:1px solid var(--g3);border-radius:6px"></div>
+        </div>
+        <div id="tplItems" class="tpl-items" style="margin-top:10px">
+          <div style="text-align:center;padding:24px;color:var(--g4);font-size:.86rem">ยังไม่มีรายการ</div>
         </div>
       </div>
     </div>
+    <div id="tplEditEmpty" class="card">
+      <div class="cb" style="text-align:center;padding:40px;color:var(--g4)">
+        <div style="font-size:2.5rem;margin-bottom:10px">👈</div>
+        <div>เลือกอาจารย์เพื่อแก้ไข Template</div>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
   </div>
 
   <!-- ===== TAB: HISTORY ===== -->
+
   <div id="thistory" class="tc">
     <div style="display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start">
 
-      <!-- LEFT: Calendar -->
-      <div class="card" style="min-width:280px;max-width:320px">
-        <!-- Calendar header -->
-        <div style="padding:10px 14px 6px;display:flex;align-items:center;gap:4px">
-          <button onclick="calNav(-12)" title="ปีก่อน"
-            style="background:none;border:1px solid var(--g3);cursor:pointer;padding:4px 7px;font-size:.75rem;color:var(--g5);border-radius:5px;line-height:1">«</button>
-          <button onclick="calNav(-1)" title="เดือนก่อน"
-            style="background:var(--primary-b);border:none;cursor:pointer;padding:5px 12px;font-size:1.1rem;color:var(--primary);border-radius:6px;font-weight:700;line-height:1">‹</button>
-          <span id="calMonthLabel" style="flex:1;text-align:center;font-weight:700;font-size:.88rem;color:var(--g8);cursor:pointer" onclick="calGoToday()" title="กลับเดือนปัจจุบัน"></span>
-          <button onclick="calNav(1)" title="เดือนถัดไป"
-            style="background:var(--primary-b);border:none;cursor:pointer;padding:5px 12px;font-size:1.1rem;color:var(--primary);border-radius:6px;font-weight:700;line-height:1">›</button>
-          <button onclick="calNav(12)" title="ปีถัดไป"
-            style="background:none;border:1px solid var(--g3);cursor:pointer;padding:4px 7px;font-size:.75rem;color:var(--g5);border-radius:5px;line-height:1">»</button>
-        </div>
-        <!-- Day-of-week header -->
-        <div style="display:grid;grid-template-columns:repeat(7,1fr);text-align:center;padding:4px 10px 2px;font-size:.7rem;font-weight:700;color:var(--g4)">
-          <span>จ</span><span>อ</span><span>พ</span><span>พฤ</span><span>ศ</span><span>ส</span><span style="color:#e53e3e">อา</span>
-        </div>
-        <!-- Calendar grid -->
-        <div id="calGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;padding:4px 10px 12px"></div>
-        <!-- Export month button -->
-        <div style="padding:8px 12px 12px;border-top:1px solid var(--g2)">
-          <button class="btn bx" style="width:100%;padding:6px;font-size:.8rem" onclick="expXLSXMonth()">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            Export เดือนนี้
-          </button>
-        </div>
-      </div>
-
-      <!-- RIGHT: Day detail -->
-      <div id="histDayPanel">
-        <!-- shown when a day is selected -->
-        <div id="histDayEmpty" class="card" style="text-align:center;padding:48px 24px;color:var(--g4)">
-          <div style="font-size:2rem;margin-bottom:8px">📅</div>
-          <div style="font-size:.9rem">เลือกวันจากปฏิทิน<br>เพื่อดูรายการบันทึก</div>
-        </div>
-        <div id="histDayContent" style="display:none">
-          <div class="card">
-            <div class="ch" style="flex-wrap:wrap;gap:6px">
-              <span id="histDayTitle" style="font-weight:700;font-size:.92rem;color:var(--primary)"></span>
-              <div class="sp"></div>
-              <input type="text" id="histSearch" placeholder="🔍 ค้นหา..." oninput="rHistDay()" style="width:140px;font-size:.78rem;padding:4px 8px">
-              <select id="histType" onchange="rHistDay()" style="font-size:.78rem;padding:4px 8px">
-                <option value="">ทั้งหมด</option>
-                <option value="receive">รับ</option>
-                <option value="issue">จ่าย</option>
-              </select>
-              <button class="btn bpu" style="padding:4px 10px;font-size:.78rem" onclick="openAddEntry()">+ เพิ่ม</button>
-              <button class="btn bx" style="padding:4px 10px;font-size:.78rem" onclick="expXLSXDay()">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                Export วันนี้
-              </button>
-              <button class="btn bd" style="padding:4px 10px;font-size:.78rem" onclick="clrHist()">🗑 ล้างทั้งหมด</button>
-            </div>
-            <div class="cb" style="padding:0">
-              <div style="overflow-x:auto;max-height:62vh;overflow-y:auto">
-                <table class="ht" style="min-width:720px">
-                  <thead style="position:sticky;top:0;z-index:2">
-                    <tr>
-                      <th style="width:40px">#</th>
-                      <th style="width:70px">ประเภท</th>
-                      <th style="width:88px">Item No.</th>
-                      <th style="min-width:180px">รายการ</th>
-                      <th style="width:55px;text-align:center">จำนวน</th>
-                      <th style="width:120px">หมายเหตุ/เคส</th>
-                      <th style="width:120px">บันทึกเมื่อ</th>
-                    </tr>
-                  </thead>
-                  <tbody id="hb"></tbody>
-                </table>
-              </div>
-              <div id="he" style="text-align:center;padding:28px;color:var(--g4);font-size:.88rem;display:none">ไม่มีรายการในวันนี้</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
+```
+  <!-- LEFT: Calendar -->
+  <div class="card" style="min-width:280px;max-width:320px">
+    <!-- Calendar header -->
+    <div style="padding:10px 14px 6px;display:flex;align-items:center;gap:4px">
+      <button onclick="calNav(-12)" title="ปีก่อน"
+        style="background:none;border:1px solid var(--g3);cursor:pointer;padding:4px 7px;font-size:.75rem;color:var(--g5);border-radius:5px;line-height:1">«</button>
+      <button onclick="calNav(-1)" title="เดือนก่อน"
+        style="background:var(--primary-b);border:none;cursor:pointer;padding:5px 12px;font-size:1.1rem;color:var(--primary);border-radius:6px;font-weight:700;line-height:1">‹</button>
+      <span id="calMonthLabel" style="flex:1;text-align:center;font-weight:700;font-size:.88rem;color:var(--g8);cursor:pointer" onclick="calGoToday()" title="กลับเดือนปัจจุบัน"></span>
+      <button onclick="calNav(1)" title="เดือนถัดไป"
+        style="background:var(--primary-b);border:none;cursor:pointer;padding:5px 12px;font-size:1.1rem;color:var(--primary);border-radius:6px;font-weight:700;line-height:1">›</button>
+      <button onclick="calNav(12)" title="ปีถัดไป"
+        style="background:none;border:1px solid var(--g3);cursor:pointer;padding:4px 7px;font-size:.75rem;color:var(--g5);border-radius:5px;line-height:1">»</button>
+    </div>
+    <!-- Day-of-week header -->
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);text-align:center;padding:4px 10px 2px;font-size:.7rem;font-weight:700;color:var(--g4)">
+      <span>จ</span><span>อ</span><span>พ</span><span>พฤ</span><span>ศ</span><span>ส</span><span style="color:#e53e3e">อา</span>
+    </div>
+    <!-- Calendar grid -->
+    <div id="calGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;padding:4px 10px 12px"></div>
+    <!-- Export month button -->
+    <div style="padding:8px 12px 12px;border-top:1px solid var(--g2)">
+      <button class="btn bx" style="width:100%;padding:6px;font-size:.8rem" onclick="expXLSXMonth()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Export เดือนนี้
+      </button>
     </div>
   </div>
 
+  <!-- RIGHT: Day detail -->
+  <div id="histDayPanel">
+    <!-- shown when a day is selected -->
+    <div id="histDayEmpty" class="card" style="text-align:center;padding:48px 24px;color:var(--g4)">
+      <div style="font-size:2rem;margin-bottom:8px">📅</div>
+      <div style="font-size:.9rem">เลือกวันจากปฏิทิน<br>เพื่อดูรายการบันทึก</div>
+    </div>
+    <div id="histDayContent" style="display:none">
+      <div class="card">
+        <div class="ch" style="flex-wrap:wrap;gap:6px">
+          <span id="histDayTitle" style="font-weight:700;font-size:.92rem;color:var(--primary)"></span>
+          <div class="sp"></div>
+          <input type="text" id="histSearch" placeholder="🔍 ค้นหา..." oninput="rHistDay()" style="width:140px;font-size:.78rem;padding:4px 8px">
+          <select id="histType" onchange="rHistDay()" style="font-size:.78rem;padding:4px 8px">
+            <option value="">ทั้งหมด</option>
+            <option value="receive">รับ</option>
+            <option value="issue">จ่าย</option>
+          </select>
+          <button class="btn bpu" style="padding:4px 10px;font-size:.78rem" onclick="openAddEntry()">+ เพิ่ม</button>
+          <button class="btn bx" style="padding:4px 10px;font-size:.78rem" onclick="expXLSXDay()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Export วันนี้
+          </button>
+          <button class="btn bd" style="padding:4px 10px;font-size:.78rem" onclick="clrHist()">🗑 ล้างทั้งหมด</button>
+        </div>
+        <div class="cb" style="padding:0">
+          <div style="overflow-x:auto;max-height:62vh;overflow-y:auto">
+            <table class="ht" style="min-width:720px">
+              <thead style="position:sticky;top:0;z-index:2">
+                <tr>
+                  <th style="width:40px">#</th>
+                  <th style="width:70px">ประเภท</th>
+                  <th style="width:88px">Item No.</th>
+                  <th style="min-width:180px">รายการ</th>
+                  <th style="width:55px;text-align:center">จำนวน</th>
+                  <th style="width:120px">หมายเหตุ/เคส</th>
+                  <th style="width:120px">บันทึกเมื่อ</th>
+                </tr>
+              </thead>
+              <tbody id="hb"></tbody>
+            </table>
+          </div>
+          <div id="he" style="text-align:center;padding:28px;color:var(--g4);font-size:.88rem;display:none">ไม่มีรายการในวันนี้</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+```
+
+  </div>
+
   <!-- ===== TAB: ITEMS ===== -->
+
   <div id="titems" class="tc">
     <div class="card">
       <div class="ch" style="flex-wrap:wrap;gap:6px">
@@ -1086,37 +1110,41 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
         </button>
       </div>
 
-      <!-- summary strip -->
-      <div style="display:flex;gap:6px;padding:8px 16px 10px;flex-wrap:wrap;border-bottom:1px solid var(--g2);align-items:center">
-        <span style="padding:3px 10px;border-radius:20px;font-size:.74rem;font-weight:600;background:#f0fdf4;color:#166534">📦 ทั้งหมด <strong id="nc-total">0</strong> รายการ</span>
-        <span style="padding:3px 10px;border-radius:20px;font-size:.74rem;background:#f8fafc;color:#475569" id="nc-showing"></span>
-        <div class="sp"></div>
-        <span style="font-size:.73rem;color:var(--g4)">คลิก Code เพื่อแก้ไข</span>
-      </div>
+```
+  <!-- summary strip -->
+  <div style="display:flex;gap:6px;padding:8px 16px 10px;flex-wrap:wrap;border-bottom:1px solid var(--g2);align-items:center">
+    <span style="padding:3px 10px;border-radius:20px;font-size:.74rem;font-weight:600;background:#f0fdf4;color:#166534">📦 ทั้งหมด <strong id="nc-total">0</strong> รายการ</span>
+    <span style="padding:3px 10px;border-radius:20px;font-size:.74rem;background:#f8fafc;color:#475569" id="nc-showing"></span>
+    <div class="sp"></div>
+    <span style="font-size:.73rem;color:var(--g4)">คลิก Code เพื่อแก้ไข</span>
+  </div>
 
-      <!-- table -->
-      <div style="overflow-x:auto;max-height:68vh;overflow-y:auto">
-        <table class="ht" style="min-width:700px;font-size:.79rem">
-          <thead style="position:sticky;top:0;z-index:2">
-            <tr>
-              <th style="width:34px">#</th>
-              <th style="width:88px;cursor:pointer" onclick="sortItems('n')" title="เรียงตาม Code">Code <span id="sort-n"></span></th>
-              <th style="min-width:280px;cursor:pointer" onclick="sortItems('d')" title="เรียงตามชื่อ">ชื่อรายการ <span id="sort-d"></span></th>
-              <th style="width:72px;text-align:center">UOM</th>
-              <th style="width:58px;text-align:center;cursor:pointer" onclick="sortItems('bal')" title="เรียงตามคงเหลือ">คงเหลือ <span id="sort-bal"></span></th>
-              <th style="width:44px;text-align:center">MIN</th>
-              <th style="width:44px;text-align:center">MAX</th>
-              <th style="width:62px;text-align:center">จัดการ</th>
-            </tr>
-          </thead>
-          <tbody id="itm-tb"></tbody>
-        </table>
-        <div id="itm-empty" style="text-align:center;padding:36px;color:var(--g4);display:none">ไม่พบรายการ</div>
-      </div>
-    </div>
+  <!-- table -->
+  <div style="overflow-x:auto;max-height:68vh;overflow-y:auto">
+    <table class="ht" style="min-width:700px;font-size:.79rem">
+      <thead style="position:sticky;top:0;z-index:2">
+        <tr>
+          <th style="width:34px">#</th>
+          <th style="width:88px;cursor:pointer" onclick="sortItems('n')" title="เรียงตาม Code">Code <span id="sort-n"></span></th>
+          <th style="min-width:280px;cursor:pointer" onclick="sortItems('d')" title="เรียงตามชื่อ">ชื่อรายการ <span id="sort-d"></span></th>
+          <th style="width:72px;text-align:center">UOM</th>
+          <th style="width:58px;text-align:center;cursor:pointer" onclick="sortItems('bal')" title="เรียงตามคงเหลือ">คงเหลือ <span id="sort-bal"></span></th>
+          <th style="width:44px;text-align:center">MIN</th>
+          <th style="width:44px;text-align:center">MAX</th>
+          <th style="width:62px;text-align:center">จัดการ</th>
+        </tr>
+      </thead>
+      <tbody id="itm-tb"></tbody>
+    </table>
+    <div id="itm-empty" style="text-align:center;padding:36px;color:var(--g4);display:none">ไม่พบรายการ</div>
+  </div>
+</div>
+```
+
   </div>
 
 <!-- MODAL: Add / Edit Item -->
+
 <div class="modal-bg" id="modalEditItem">
   <div class="modal" style="width:480px">
     <div class="mh">
@@ -1158,6 +1186,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
 </div>
 
 <!-- MODAL: Confirm Delete Item -->
+
 <div class="modal-bg" id="modalDelItem">
   <div class="modal" style="width:360px">
     <div class="mh">
@@ -1175,8 +1204,8 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
   </div>
 </div>
 
-
 <!-- MODAL: Google Drive Setup -->
+
 <div class="modal-bg" id="modalGDrive">
   <div class="modal" style="width:540px;max-height:90vh;overflow-y:auto">
     <div class="mh">
@@ -1185,87 +1214,90 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
     </div>
     <div class="mb2">
 
-      <!-- Setup Guide -->
-      <div id="gdSetupGuide" style="display:none">
-        <div class="gd-setup-card">
-          <div style="font-weight:700;color:var(--primary);margin-bottom:12px;font-size:.9rem">📋 วิธีสร้าง Google Client ID (ทำครั้งเดียว)</div>
-          <div class="gd-step">
-            <div class="gd-step-num">1</div>
-            <div>ไปที่ <a href="https://console.cloud.google.com/" target="_blank" style="color:var(--primary)">console.cloud.google.com</a> → สร้าง Project ใหม่ (ชื่ออะไรก็ได้)</div>
-          </div>
-          <div class="gd-step">
-            <div class="gd-step-num">2</div>
-            <div>เปิด <strong>APIs &amp; Services → Library</strong> → ค้นหา <strong>"Google Drive API"</strong> → Enable</div>
-          </div>
-          <div class="gd-step">
-            <div class="gd-step-num">3</div>
-            <div>ไปที่ <strong>APIs &amp; Services → OAuth consent screen</strong> → เลือก <strong>External</strong> → กรอกชื่อ App → Save</div>
-          </div>
-          <div class="gd-step">
-            <div class="gd-step-num">4</div>
-            <div>ไปที่ <strong>Credentials → Create Credentials → OAuth Client ID</strong> → เลือก <strong>Web application</strong></div>
-          </div>
-          <div class="gd-step">
-            <div class="gd-step-num">5</div>
-            <div>ใน <strong>Authorized JavaScript origins</strong> เพิ่ม URL ที่เปิดไฟล์นี้ เช่น <code style="background:var(--g2);padding:1px 5px;border-radius:3px">file://</code> หรือ <code style="background:var(--g2);padding:1px 5px;border-radius:3px">http://localhost</code></div>
-          </div>
-          <div class="gd-step">
-            <div class="gd-step-num">6</div>
-            <div>Copy <strong>Client ID</strong> ที่ได้ → วางในช่องด้านล่าง</div>
-          </div>
-        </div>
+```
+  <!-- Setup Guide -->
+  <div id="gdSetupGuide" style="display:none">
+    <div class="gd-setup-card">
+      <div style="font-weight:700;color:var(--primary);margin-bottom:12px;font-size:.9rem">📋 วิธีสร้าง Google Client ID (ทำครั้งเดียว)</div>
+      <div class="gd-step">
+        <div class="gd-step-num">1</div>
+        <div>ไปที่ <a href="https://console.cloud.google.com/" target="_blank" style="color:var(--primary)">console.cloud.google.com</a> → สร้าง Project ใหม่ (ชื่ออะไรก็ได้)</div>
       </div>
-
-      <!-- Client ID Input -->
-      <div style="margin-bottom:14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-          <label style="font-weight:600">Google OAuth Client ID</label>
-          <button onclick="document.getElementById('gdSetupGuide').style.display=document.getElementById('gdSetupGuide').style.display==='none'?'block':'none'" 
-            style="background:none;border:none;cursor:pointer;font-size:.76rem;color:var(--primary);text-decoration:underline">
-            📖 วิธีสร้าง Client ID
-          </button>
-        </div>
-        <input type="text" id="gdClientId" placeholder="xxxxxxxxxx.apps.googleusercontent.com" 
-          style="font-family:monospace;font-size:.78rem" oninput="gdCheckClientId()">
-        <div id="gdClientIdStatus" style="font-size:.74rem;margin-top:4px;color:var(--g4)">วาง Client ID จาก Google Cloud Console</div>
+      <div class="gd-step">
+        <div class="gd-step-num">2</div>
+        <div>เปิด <strong>APIs &amp; Services → Library</strong> → ค้นหา <strong>"Google Drive API"</strong> → Enable</div>
       </div>
-
-      <!-- Auto-save settings -->
-      <div style="background:var(--g1);border-radius:8px;padding:12px;margin-bottom:14px">
-        <div style="font-weight:600;margin-bottom:8px;font-size:.85rem">⚙️ ตั้งค่าการ Sync</div>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;font-weight:normal">
-          <input type="checkbox" id="gdAutoSave" style="width:16px;height:16px;cursor:pointer">
-          <span style="font-size:.84rem">Auto-save ทุกครั้งที่บันทึกรายการ</span>
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:normal">
-          <input type="checkbox" id="gdAutoLoad" style="width:16px;height:16px;cursor:pointer">
-          <span style="font-size:.84rem">Auto-load เมื่อเปิดแอป (ดึงข้อมูลล่าสุดจาก Drive)</span>
-        </label>
+      <div class="gd-step">
+        <div class="gd-step-num">3</div>
+        <div>ไปที่ <strong>APIs &amp; Services → OAuth consent screen</strong> → เลือก <strong>External</strong> → กรอกชื่อ App → Save</div>
       </div>
-
-      <!-- Status info if already connected -->
-      <div id="gdConnectedInfo" style="display:none;background:#f0fdf4;border-radius:8px;padding:12px;margin-bottom:14px;border:1px solid #86efac">
-        <div style="font-weight:600;color:#15803d;margin-bottom:4px">✅ เชื่อมต่อแล้ว</div>
-        <div style="font-size:.8rem;color:#166534" id="gdConnectedEmail"></div>
-        <div style="font-size:.78rem;color:#166534;margin-top:2px" id="gdConnectedFile"></div>
-        <button onclick="gdDisconnect()" style="margin-top:8px;background:none;border:1px solid #b91c1c;color:#b91c1c;border-radius:5px;padding:3px 10px;cursor:pointer;font-size:.75rem">
-          ยกเลิกการเชื่อมต่อ
-        </button>
+      <div class="gd-step">
+        <div class="gd-step-num">4</div>
+        <div>ไปที่ <strong>Credentials → Create Credentials → OAuth Client ID</strong> → เลือก <strong>Web application</strong></div>
       </div>
-
+      <div class="gd-step">
+        <div class="gd-step-num">5</div>
+        <div>ใน <strong>Authorized JavaScript origins</strong> เพิ่ม URL ที่เปิดไฟล์นี้ เช่น <code style="background:var(--g2);padding:1px 5px;border-radius:3px">file://</code> หรือ <code style="background:var(--g2);padding:1px 5px;border-radius:3px">http://localhost</code></div>
+      </div>
+      <div class="gd-step">
+        <div class="gd-step-num">6</div>
+        <div>Copy <strong>Client ID</strong> ที่ได้ → วางในช่องด้านล่าง</div>
+      </div>
     </div>
-    <div class="mf">
-      <button class="btn bs" onclick="closeModal('modalGDrive')">ปิด</button>
-      <button class="btn bsv" id="gdConnectBtn" onclick="gdConnect()" disabled>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-2px"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-        เชื่อมต่อ Google Drive
+  </div>
+
+  <!-- Client ID Input -->
+  <div style="margin-bottom:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <label style="font-weight:600">Google OAuth Client ID</label>
+      <button onclick="document.getElementById('gdSetupGuide').style.display=document.getElementById('gdSetupGuide').style.display==='none'?'block':'none'" 
+        style="background:none;border:none;cursor:pointer;font-size:.76rem;color:var(--primary);text-decoration:underline">
+        📖 วิธีสร้าง Client ID
       </button>
     </div>
+    <input type="text" id="gdClientId" placeholder="xxxxxxxxxx.apps.googleusercontent.com" 
+      style="font-family:monospace;font-size:.78rem" oninput="gdCheckClientId()">
+    <div id="gdClientIdStatus" style="font-size:.74rem;margin-top:4px;color:var(--g4)">วาง Client ID จาก Google Cloud Console</div>
+  </div>
+
+  <!-- Auto-save settings -->
+  <div style="background:var(--g1);border-radius:8px;padding:12px;margin-bottom:14px">
+    <div style="font-weight:600;margin-bottom:8px;font-size:.85rem">⚙️ ตั้งค่าการ Sync</div>
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;font-weight:normal">
+      <input type="checkbox" id="gdAutoSave" style="width:16px;height:16px;cursor:pointer">
+      <span style="font-size:.84rem">Auto-save ทุกครั้งที่บันทึกรายการ</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:normal">
+      <input type="checkbox" id="gdAutoLoad" style="width:16px;height:16px;cursor:pointer">
+      <span style="font-size:.84rem">Auto-load เมื่อเปิดแอป (ดึงข้อมูลล่าสุดจาก Drive)</span>
+    </label>
+  </div>
+
+  <!-- Status info if already connected -->
+  <div id="gdConnectedInfo" style="display:none;background:#f0fdf4;border-radius:8px;padding:12px;margin-bottom:14px;border:1px solid #86efac">
+    <div style="font-weight:600;color:#15803d;margin-bottom:4px">✅ เชื่อมต่อแล้ว</div>
+    <div style="font-size:.8rem;color:#166534" id="gdConnectedEmail"></div>
+    <div style="font-size:.78rem;color:#166534;margin-top:2px" id="gdConnectedFile"></div>
+    <button onclick="gdDisconnect()" style="margin-top:8px;background:none;border:1px solid #b91c1c;color:#b91c1c;border-radius:5px;padding:3px 10px;cursor:pointer;font-size:.75rem">
+      ยกเลิกการเชื่อมต่อ
+    </button>
+  </div>
+
+</div>
+<div class="mf">
+  <button class="btn bs" onclick="closeModal('modalGDrive')">ปิด</button>
+  <button class="btn bsv" id="gdConnectBtn" onclick="gdConnect()" disabled>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-2px"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+    เชื่อมต่อ Google Drive
+  </button>
+</div>
+```
+
   </div>
 </div>
 
-
 <!-- MODAL: GDrive Restore Confirm -->
+
 <div class="modal-bg" id="modalGDRestore">
   <div class="modal" style="width:380px">
     <div class="mh">
@@ -1285,6 +1317,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
 </div>
 
 <!-- MODAL: Add Doctor -->
+
 <div class="modal-bg" id="modalAddDoc">
   <div class="modal">
     <div class="mh">
@@ -1322,6 +1355,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
 </div>
 
 <!-- MODAL: Rename Template -->
+
 <div class="modal-bg" id="modalRenameDoc">
   <div class="modal">
     <div class="mh">
@@ -1381,6 +1415,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
 </div>
 
 <!-- CONFIRM CLEAR HISTORY MODAL -->
+
 <div class="modal-bg" id="modalConfirmClear">
   <div class="modal" style="width:360px">
     <div class="mh">
@@ -1436,6 +1471,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
 </div>
 
 <!-- Import from Template Modal -->
+
 <div class="modal-bg" id="modalImportTpl">
   <div class="modal" style="width:560px;max-height:85vh;display:flex;flex-direction:column">
     <div class="mh">
@@ -1457,6 +1493,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
 </div>
 
 <!-- Edit History Entry Modal -->
+
 <div class="modal-bg" id="modalEditEntry">
   <div class="modal" style="width:480px">
     <div class="mh">
@@ -6859,8 +6896,25 @@ function expXLSX(dateFilter) {
     else carryMap[no2] -= (s.qty||0);
   });
 
+  // ── หารายการที่อยู่ใน saved แต่ไม่มีใน ITEMS → เพิ่มต่อท้าย ──
+  const existingNos  = new Set(ITEMS.map(i => (i.n||'').trim().toUpperCase()).filter(Boolean));
+  const existingDesc = new Set(ITEMS.map(i => (i.d||'').trim().toLowerCase()).filter(Boolean));
+  const extraItems = [];
+  const seenExtra  = new Set();
+  saved.forEach(s => {
+    const no2  = (s.item_no||'').trim().toUpperCase();
+    const dsc2 = (s.desc||s.origName||'').trim().toLowerCase();
+    if (no2 && existingNos.has(no2))   return; // มีอยู่แล้ว
+    if (!no2 && dsc2 && existingDesc.has(dsc2)) return;
+    const key = no2 || dsc2;
+    if (!key || seenExtra.has(key)) return;
+    seenExtra.add(key);
+    extraItems.push({ n: no2, d: s.desc || s.origName || '', uom: s.uom || '', ref: '', bal: '', min: '', max: '' });
+  });
+  const ALL_ITEMS = [...ITEMS, ...extraItems];
+
   // ── Data rows ──
-  ITEMS.forEach((item, idx) => {
+  ALL_ITEMS.forEach((item, idx) => {
     const r   = idx + 6;
     const no  = (item.n||'').trim().toUpperCase();
     const dsc = (item.d||'').trim().toLowerCase();
@@ -6902,7 +6956,7 @@ function expXLSX(dateFilter) {
   });
 
   // ── Sheet metadata ──
-  ws['!ref']    = XLSX.utils.encode_range({s:{r:0,c:0}, e:{r:ITEMS.length+5, c:DB-1}});
+  ws['!ref']    = XLSX.utils.encode_range({s:{r:0,c:0}, e:{r:ALL_ITEMS.length+5, c:DB-1}});
   ws['!merges'] = mgs;
   ws['!freeze'] = {xSplit:5, ySplit:5};  // freeze at F6
 
@@ -6922,8 +6976,10 @@ function expXLSX(dateFilter) {
 
   // Row heights — exact from template
   const rowH = [{hpt:15},{hpt:13.8},{hpt:10.8},{hpt:15.75},{hpt:12.75}];
-  for (let i=0; i<ITEMS.length; i++) rowH.push({hpt:12.6});
+  for (let i=0; i<ALL_ITEMS.length; i++) rowH.push({hpt:12.6});
   ws['!rows'] = rowH;
+
+  if (extraItems.length > 0) showT(`📊 Export แล้ว (รวม ${extraItems.length} รายการใหม่ที่เพิ่มเข้ามา)`, 'ok');
 
   XLSX.utils.book_append_sheet(WB, ws, 'Stock Card');
   XLSX.writeFile(WB, dateFilter ? `Stock_Card_OR_${dateFilter}.xlsx` : `Stock_Card_OR_${dateStr}.xlsx`);
@@ -7031,7 +7087,7 @@ function esc(s) {
 ══════════════════════════════════════════ */
 
 const GD = {
-  CLIENT_ID:   '',
+  CLIENT_ID:   '311439057715-c5rvis5drhkc9m32nhisn0mnd6q6c854.apps.googleusercontent.com',
   SCOPES:      'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file',
   FOLDER_NAME: 'StockCard_OR_BEH',
   FILE_NAME:   'stockcard_backup.json',
@@ -7048,7 +7104,7 @@ const GD = {
 /* ── Init ─────────────────────────────────── */
 function gdInit() {
   const saved_cfg = (() => { try { return JSON.parse(localStorage.getItem('orGD') || '{}'); } catch{ return {}; } })();
-  GD.CLIENT_ID = saved_cfg.clientId || '';
+  GD.CLIENT_ID = '311439057715-c5rvis5drhkc9m32nhisn0mnd6q6c854.apps.googleusercontent.com';
   GD.autoSave  = saved_cfg.autoSave || false;
   GD.autoLoad  = saved_cfg.autoLoad || false;
   GD.accessToken = saved_cfg.token || null;
@@ -7739,6 +7795,7 @@ function saveNewPin() {
 </script>
 
 <!-- MODAL: Import Items from Template (grid picker) -->
+
 <div class="modal-bg" id="modalImpGrid" style="z-index:3000">
   <div class="modal" style="width:min(760px,96vw);max-height:88vh;display:flex;flex-direction:column;padding:0">
     <div class="mh" style="padding:12px 16px;flex-shrink:0">
@@ -7768,6 +7825,7 @@ function saveNewPin() {
 </div>
 
 <!-- MODAL: Prefix Color Settings -->
+
 <div class="modal-bg" id="modalColorSettings">
   <div class="modal" style="width:min(500px,94vw);max-height:85vh;overflow-y:auto">
     <div class="mh">
@@ -7789,6 +7847,7 @@ function saveNewPin() {
 </div>
 
 <!-- PIN SCREEN -->
+
 <div id="pinScreen">
   <!-- Left panel — clean avatar style -->
   <div class="pin-left">
@@ -7804,38 +7863,41 @@ function saveNewPin() {
   </div>
 
   <!-- Right form -->
+
   <div class="pin-right">
     <div class="pin-right-title">Log in</div>
     <div class="pin-right-sub">ใส่รหัส PIN เพื่อเข้าใช้งานระบบ</div>
 
-    <span class="pin-field-label">PIN (4 หลัก)</span>
-    <div class="pin-input-wrap">
-      <input type="password" id="pinTextField" maxlength="4" placeholder="••••"
-        class="pin-text-input" oninput="onPinType(this.value)"
-        onkeydown="if(event.key==='Enter')checkPin()"
-        autocomplete="off" inputmode="numeric">
-      <button class="pin-eye-btn" onmousedown="showPinText(true)" onmouseup="showPinText(false)" onmouseleave="showPinText(false)" title="แสดงรหัส">
-        <svg id="eyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-      </button>
-    </div>
-    <div class="pin-msg" id="pinMsg"></div>
-    <button class="pin-submit" onclick="checkPin()">Log in</button>
+```
+<span class="pin-field-label">PIN (4 หลัก)</span>
+<div class="pin-input-wrap">
+  <input type="password" id="pinTextField" maxlength="4" placeholder="••••"
+    class="pin-text-input" oninput="onPinType(this.value)"
+    onkeydown="if(event.key==='Enter')checkPin()"
+    autocomplete="off" inputmode="numeric">
+  <button class="pin-eye-btn" onmousedown="showPinText(true)" onmouseup="showPinText(false)" onmouseleave="showPinText(false)" title="แสดงรหัส">
+    <svg id="eyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+  </button>
+</div>
+<div class="pin-msg" id="pinMsg"></div>
+<button class="pin-submit" onclick="checkPin()">Log in</button>
 
-    <div class="pin-dots" id="pinDots" style="display:none">
-      <div class="pin-dot" id="pd0"></div>
-      <div class="pin-dot" id="pd1"></div>
-      <div class="pin-dot" id="pd2"></div>
-      <div class="pin-dot" id="pd3"></div>
-    </div>
-
-
-    <div class="pin-change-link">ต้องการเปลี่ยนรหัส? <span onclick="openChangePin()">เปลี่ยน PIN</span></div>
-  </div>
+<div class="pin-dots" id="pinDots" style="display:none">
+  <div class="pin-dot" id="pd0"></div>
+  <div class="pin-dot" id="pd1"></div>
+  <div class="pin-dot" id="pd2"></div>
+  <div class="pin-dot" id="pd3"></div>
 </div>
 
 
+<div class="pin-change-link">ต้องการเปลี่ยนรหัส? <span onclick="openChangePin()">เปลี่ยน PIN</span></div>
+```
+
+  </div>
+</div>
 
 <!-- CHANGE PIN MODAL -->
+
 <div class="modal-bg" id="modalChangePin" style="z-index:100000">
   <div class="modal" style="width:340px">
     <div class="mh">

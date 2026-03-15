@@ -472,7 +472,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
       window._fbPending = {};
 
       // ── Initial load: Firebase → localStorage → app ──
-      const KEYS = ['orSE','orDocs','orItems','orCatOrder','orCatC','orCustomCats','orItemMarks','orPrefixHues'];
+      const KEYS = ['orSE','orDocs','orItems','orCatOrder','orCatC','orCustomCats','orItemMarks','orPrefixHues','orPinHash'];
       let needReload = false;
       for (const k of KEYS) {
         const fbVal = await window._fbRead(k);
@@ -517,6 +517,13 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
         if (localStorage.getItem('orItems') !== remote) {
           localStorage.setItem('orItems', remote);
           try { if(typeof rItems==='function') rItems(); } catch(e){}
+        }
+      });
+      // ── Sync PIN across devices ──
+      window._fbListen('orPinHash', val => {
+        if (val === null) return;
+        if (localStorage.getItem('orPinHash') !== val) {
+          localStorage.setItem('orPinHash', val);
         }
       });
     });
@@ -7709,9 +7716,12 @@ function saveNewPin() {
   if (newVal !== confVal) {
     msg.textContent = '❌ PIN ใหม่ไม่ตรงกัน'; return;
   }
-  localStorage.setItem(PIN_KEY, _hashPin(newVal));
+  const newHash = _hashPin(newVal);
+  localStorage.setItem(PIN_KEY, newHash);
+  // Sync PIN to Firebase so all devices get the new PIN
+  if (window._fbWrite) window._fbWrite('orPinHash', newHash);
   closeModal('modalChangePin');
-  showT('✅ เปลี่ยน PIN เรียบร้อยแล้ว', 'ok');
+  showT('✅ เปลี่ยน PIN เรียบร้อยแล้ว (sync ทุกเครื่อง)', 'ok');
 }
 
 // Init

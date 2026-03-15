@@ -647,7 +647,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
   <button style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:4px 10px;cursor:pointer;color:#fff;font-size:.72rem;margin-left:5px;font-family:'Sarabun',sans-serif" id="gdSaveBtn" onclick="gdSaveNow()" title="Backup ไป Google Drive">
     💾 Backup
   </button>
-  <button style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:4px 10px;cursor:pointer;color:#fff;font-size:.72rem;margin-left:5px;font-family:'Sarabun',sans-serif" id="gdLoadBtn" onclick="gdLoadLatest()" title="Restore จาก Google Drive">
+  <button style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:4px 10px;cursor:pointer;color:#fff;font-size:.72rem;margin-left:5px;font-family:'Sarabun',sans-serif" id="gdLoadBtn" onclick="requireMasterPin('⚠️ Restore จะแทนที่ข้อมูลปัจจุบันทั้งหมด — ยืนยัน?', gdLoadLatest)" title="Restore จาก Google Drive">
     📥 Restore
   </button>
   <span id="gdLastSync" style="font-size:.71rem;color:rgba(255,255,255,.5);margin-left:8px"></span>
@@ -6716,12 +6716,45 @@ function updateCaseLabel(batchKey, label) {
   if (changed) { localStorage.setItem('orSE', JSON.stringify(saved)); if(window._fbWrite) window._fbWrite('orSE', saved); }
 }
 
+let _masterPinCallback = null;
+
+function requireMasterPin(desc, callback) {
+  _masterPinCallback = callback;
+  document.getElementById('masterPinDesc').textContent = desc;
+  document.getElementById('masterPinInput').value = '';
+  document.getElementById('masterPinMsg').textContent = '';
+  document.getElementById('modalMasterPin')?.classList.add('open');
+  setTimeout(() => document.getElementById('masterPinInput')?.focus(), 200);
+}
+
+function confirmMasterPin() {
+  const val = document.getElementById('masterPinInput').value;
+  const msg = document.getElementById('masterPinMsg');
+  if (val !== PIN_MASTER) {
+    msg.textContent = '❌ รหัสผ่านไม่ถูกต้อง';
+    document.getElementById('masterPinInput').value = '';
+    return;
+  }
+  closeModal('modalMasterPin');
+  if (typeof _masterPinCallback === 'function') {
+    _masterPinCallback();
+    _masterPinCallback = null;
+  }
+}
+
 function clrHist() {
-  document.getElementById('modalConfirmClear')?.classList.add('open');
+  requireMasterPin('⚠️ ยืนยันการล้างประวัติทั้งหมด — ไม่สามารถกู้คืนได้', () => {
+    saved = [];
+    localStorage.removeItem('orSE');
+    if (window._fbWrite) window._fbWrite('orSE', []);
+    updSum(); rHist();
+    showT('🗑️ ลบประวัติทั้งหมดแล้ว', 'ok');
+  });
 }
 function clrHistConfirmed() {
   saved = [];
   localStorage.removeItem('orSE');
+  if (window._fbWrite) window._fbWrite('orSE', []);
   closeModal('modalConfirmClear');
   updSum(); rHist();
   showT('🗑️ ลบประวัติทั้งหมดแล้ว', 'ok');
@@ -7524,7 +7557,12 @@ const CHIP_SWATCHES = [
 let _itemMarks = (() => {
   try { return JSON.parse(localStorage.getItem('orItemMarks')||'{}'); } catch{ return {}; }
 })();
-function saveItemMarks() { try { localStorage.setItem('orItemMarks', JSON.stringify(_itemMarks)); } catch{} }
+function saveItemMarks() {
+  try {
+    localStorage.setItem('orItemMarks', JSON.stringify(_itemMarks));
+    if (window._fbWrite) window._fbWrite('orItemMarks', _itemMarks);
+  } catch{}
+}
 
 function openChipColorPicker(e, code) {
   e.stopPropagation();
@@ -7967,7 +8005,29 @@ function saveNewPin() {
 
 
 
-<!-- CHANGE PIN MODAL -->
+<!-- MODAL: Master PIN Confirm -->
+<div class="modal-bg" id="modalMasterPin" style="z-index:99998">
+  <div class="modal" style="width:320px">
+    <div class="mh">
+      <span class="mt">🔐 ยืนยันรหัสผ่าน</span>
+      <span class="mc" onclick="closeModal('modalMasterPin')">✕</span>
+    </div>
+    <div class="mb2">
+      <p id="masterPinDesc" style="font-size:.85rem;color:var(--g6);margin-bottom:12px"></p>
+      <label style="font-size:.78rem;font-weight:600;color:var(--g6);display:block;margin-bottom:4px">รหัสผ่าน</label>
+      <input type="password" id="masterPinInput" maxlength="10" placeholder="••••"
+        style="width:100%;font-size:1.3rem;text-align:center;letter-spacing:8px;padding:8px;border:1.5px solid var(--g3);border-radius:8px"
+        onkeydown="if(event.key==='Enter')confirmMasterPin()" autocomplete="off">
+      <div id="masterPinMsg" style="font-size:.78rem;color:#ef4444;margin-top:6px;min-height:16px"></div>
+    </div>
+    <div class="mf">
+      <button class="btn bs" onclick="closeModal('modalMasterPin')">ยกเลิก</button>
+      <button class="btn bd" onclick="confirmMasterPin()">✅ ยืนยัน</button>
+    </div>
+  </div>
+</div>
+
+
 <div class="modal-bg" id="modalChangePin" style="z-index:100000">
   <div class="modal" style="width:340px">
     <div class="mh">

@@ -292,7 +292,17 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
 .ht thead{position:sticky;top:0;z-index:2}
 .ht td:nth-child(5){white-space:normal;min-width:200px;max-width:280px}
 
-/* ── ICONS ── */
+/* ── DRAG & DROP ── */
+.tpl-card[draggable]{cursor:grab}
+.tpl-card[draggable]:active{cursor:grabbing}
+.tpl-card.drag-over{border:2px dashed var(--primary)!important;background:var(--primary-b)!important;opacity:.7}
+.tpl-card.dragging{opacity:.4;transform:scale(.97)}
+.tpl-row[draggable]{cursor:grab}
+.tpl-row[draggable]:active{cursor:grabbing}
+.tpl-row.drag-over{border-top:2px solid var(--primary)!important;background:var(--primary-b)!important}
+.tpl-row.dragging{opacity:.4}
+.drag-handle{color:var(--g4);cursor:grab;padding:0 4px;font-size:1rem;flex-shrink:0;user-select:none}
+.drag-handle:hover{color:var(--primary)}
 .ico{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
 .ico svg{display:block}
 .ch .ico svg{stroke:#fff;opacity:.85}
@@ -5453,7 +5463,7 @@ function renderDocGrid() {
       var isFirst = di === 0;
       var isLast  = di === docs.length - 1;
       var isPreset = d.preset === true;
-      cardsHtml += '<div class="tpl-card ' + (sel?'sel':'') + (isPreset?' preset-card':'') + '" onclick=\'selectDoc("' + eid + '")\'>';
+      cardsHtml += '<div class="tpl-card ' + (sel?'sel':'') + (isPreset?' preset-card':'') + '" draggable="true" data-doc-id="' + eid + '" data-doc-cat="' + esc(d.cat||'') + '" onclick=\'selectDoc("' + eid + '")\'>';
       cardsHtml += '<div style="display:flex;align-items:flex-start;gap:5px">';
       cardsHtml += '<div style="flex:1;min-width:0">';
       cardsHtml += '<div class="tc2" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(d.name) + '</div>';
@@ -5500,6 +5510,7 @@ function renderDocGrid() {
   out += ' เพิ่ม Template</div>';
 
   grid.innerHTML = out;
+  attachDocCardDrag();
 }
 
 
@@ -5604,12 +5615,99 @@ function renderTplItems(doc) {
       ' onchange="updateTplItemQty(\'' + doc.id + '\',' + idx + ',this.value)" title="จำนวนที่ใช้">' +
       '<span style="cursor:pointer;color:var(--g4);font-size:.9rem;margin-left:6px"' +
       ' onclick="removeTplItem(\'' + doc.id + '\',' + idx + ')" title="ลบ">✕</span>';
-    return '<div class="tpl-row">' +
+    return '<div class="tpl-row" draggable="true" data-idx="' + idx + '" data-doc-id="' + doc.id + '">' +
+      '<span class="drag-handle" title="ลากเพื่อเรียงลำดับ">⠿</span>' +
       '<span class="item-no ' + (item.n && item.n !== '—' ? '' : 'empty') + '">' + (item.n || '—') + '</span>' +
       '<span style="flex:1;font-size:.82rem">' + esc(item.d) + '</span>' +
       editControls +
       '</div>';
   }).join('');
+
+  // ── Attach drag events to tpl-rows ──
+  attachTplRowDrag(container, doc);
+}
+
+/* ══════════════════════════════════════════
+   DRAG & DROP — Template Cards
+══════════════════════════════════════════ */
+let _dragDocId = null;
+
+function attachDocCardDrag() {
+  const grid = document.getElementById('docGrid');
+  if (!grid) return;
+  grid.querySelectorAll('.tpl-card[data-doc-id]').forEach(card => {
+    card.addEventListener('dragstart', e => {
+      _dragDocId = card.dataset.docId;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      grid.querySelectorAll('.tpl-card').forEach(c => c.classList.remove('drag-over'));
+    });
+    card.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (card.dataset.docId !== _dragDocId) card.classList.add('drag-over');
+    });
+    card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+    card.addEventListener('drop', e => {
+      e.preventDefault();
+      card.classList.remove('drag-over');
+      const fromId = _dragDocId;
+      const toId   = card.dataset.docId;
+      if (!fromId || fromId === toId) return;
+      const fromIdx = doctors.findIndex(d => d.id === fromId);
+      const toIdx   = doctors.findIndex(d => d.id === toId);
+      if (fromIdx < 0 || toIdx < 0) return;
+      const [moved] = doctors.splice(fromIdx, 1);
+      doctors.splice(toIdx, 0, moved);
+      saveDocs();
+      renderDocGrid();
+      showT('✅ เรียงลำดับ Template แล้ว', 'ok');
+    });
+  });
+}
+
+/* ══════════════════════════════════════════
+   DRAG & DROP — Template Items (Rows)
+══════════════════════════════════════════ */
+let _dragRowIdx = null;
+let _dragRowDocId = null;
+
+function attachTplRowDrag(container, doc) {
+  container.querySelectorAll('.tpl-row[data-idx]').forEach(row => {
+    row.addEventListener('dragstart', e => {
+      _dragRowIdx   = parseInt(row.dataset.idx);
+      _dragRowDocId = row.dataset.docId;
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      container.querySelectorAll('.tpl-row').forEach(r => r.classList.remove('drag-over'));
+    });
+    row.addEventListener('dragover', e => {
+      e.preventDefault();
+      const toIdx = parseInt(row.dataset.idx);
+      if (toIdx !== _dragRowIdx) row.classList.add('drag-over');
+    });
+    row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+    row.addEventListener('drop', e => {
+      e.preventDefault();
+      row.classList.remove('drag-over');
+      const fromIdx = _dragRowIdx;
+      const toIdx   = parseInt(row.dataset.idx);
+      if (fromIdx === null || fromIdx === toIdx) return;
+      const d = doctors.find(d => d.id === _dragRowDocId);
+      if (!d) return;
+      const items = d.items || [];
+      const [moved] = items.splice(fromIdx, 1);
+      items.splice(toIdx, 0, moved);
+      saveDocs();
+      renderTplItems(d);
+      showT('✅ เรียงลำดับรายการแล้ว', 'ok');
+    });
+  });
 }
 
 function swTplTab(tab) {

@@ -7083,7 +7083,7 @@ function esc(s) {
 ══════════════════════════════════════════ */
 
 const GD = {
-  CLIENT_ID:   '311439057715-c5rvis5drhkc9m32nhisn0mnd6q6c854.apps.googleusercontent.com',
+  CLIENT_ID:   '142005075916-rdf9a8k3kef8rif6d257p2abokh0uga0.apps.googleusercontent.com',
   SCOPES:      'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file',
   FOLDER_NAME: 'StockCard_OR_BEH',
   FILE_NAME:   'stockcard_backup.json',
@@ -7100,7 +7100,7 @@ const GD = {
 /* ── Init ─────────────────────────────────── */
 function gdInit() {
   const saved_cfg = (() => { try { return JSON.parse(localStorage.getItem('orGD') || '{}'); } catch{ return {}; } })();
-  GD.CLIENT_ID = '311439057715-c5rvis5drhkc9m32nhisn0mnd6q6c854.apps.googleusercontent.com';
+  GD.CLIENT_ID = '142005075916-rdf9a8k3kef8rif6d257p2abokh0uga0.apps.googleusercontent.com';
   GD.autoSave  = saved_cfg.autoSave || false;
   GD.autoLoad  = saved_cfg.autoLoad || false;
   GD.accessToken = saved_cfg.token || null;

@@ -1483,7 +1483,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
 
 <!-- Edit History Entry Modal -->
 <div class="modal-bg" id="modalEditEntry">
-  <div class="modal" style="width:480px">
+  <div class="modal" style="width:520px;max-height:90vh;overflow-y:auto">
     <div class="mh">
       <span class="mt" id="editEntryTitle">แก้ไขรายการ</span>
       <span class="mc" onclick="closeModal('modalEditEntry')">✕</span>
@@ -1502,28 +1502,60 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
           </select>
         </div>
       </div>
-      <div style="margin-bottom:10px">
-        <label style="font-size:.78rem;font-weight:600;color:var(--g6);display:block;margin-bottom:3px">Item No.</label>
-        <div style="display:flex;gap:6px">
-          <input type="text" id="eeCode" placeholder="เช่น MS1199" style="width:130px;font-size:.85rem;padding:6px 9px;font-family:'IBM Plex Mono',monospace" oninput="eeSearchCode(this.value)">
-          <input type="text" id="eeDesc" placeholder="ชื่อรายการ" style="flex:1;font-size:.85rem;padding:6px 9px" readonly>
-        </div>
-        <div id="eeSearchRes" class="sr-list" style="display:none;margin-top:3px;max-height:160px"></div>
+
+      <!-- Tab: ค้นหา / จาก Template -->
+      <div id="eeTabBar" style="display:flex;border-bottom:2px solid var(--g3);margin-bottom:10px">
+        <button id="eeTabSearch" onclick="swEeTab('search')"
+          style="flex:1;padding:6px 0;border:none;background:none;cursor:pointer;font-size:.8rem;font-weight:700;font-family:'Sarabun',sans-serif;color:var(--primary);border-bottom:2px solid var(--primary);margin-bottom:-2px">
+          🔍 ค้นหารายการ
+        </button>
+        <button id="eeTabTpl" onclick="swEeTab('tpl')"
+          style="flex:1;padding:6px 0;border:none;background:none;cursor:pointer;font-size:.8rem;font-weight:700;font-family:'Sarabun',sans-serif;color:var(--g4);border-bottom:2px solid transparent;margin-bottom:-2px">
+          📋 จาก Template
+        </button>
       </div>
-      <div style="display:grid;grid-template-columns:100px 1fr;gap:10px;margin-bottom:10px">
-        <div>
-          <label style="font-size:.78rem;font-weight:600;color:var(--g6);display:block;margin-bottom:3px">จำนวน</label>
-          <input type="number" id="eeQty" min="0" step="1" style="width:100%;font-size:.85rem;padding:6px 9px;text-align:center">
+
+      <!-- Pane: ค้นหา -->
+      <div id="eePaneSearch">
+        <div style="margin-bottom:10px">
+          <label style="font-size:.78rem;font-weight:600;color:var(--g6);display:block;margin-bottom:3px">Item No.</label>
+          <div style="display:flex;gap:6px">
+            <input type="text" id="eeCode" placeholder="เช่น MS1199" style="width:130px;font-size:.85rem;padding:6px 9px;font-family:'IBM Plex Mono',monospace" oninput="eeSearchCode(this.value)">
+            <input type="text" id="eeDesc" placeholder="ชื่อรายการ" style="flex:1;font-size:.85rem;padding:6px 9px" readonly>
+          </div>
+          <div id="eeSearchRes" class="sr-list" style="display:none;margin-top:3px;max-height:160px"></div>
         </div>
-        <div>
-          <label style="font-size:.78rem;font-weight:600;color:var(--g6);display:block;margin-bottom:3px">หมายเหตุ</label>
-          <input type="text" id="eeNote" placeholder="หมายเหตุ / ชื่ออาจารย์..." style="width:100%;font-size:.85rem;padding:6px 9px">
+        <div style="display:grid;grid-template-columns:100px 1fr;gap:10px;margin-bottom:10px">
+          <div>
+            <label style="font-size:.78rem;font-weight:600;color:var(--g6);display:block;margin-bottom:3px">จำนวน</label>
+            <input type="number" id="eeQty" min="0" step="1" style="width:100%;font-size:.85rem;padding:6px 9px;text-align:center">
+          </div>
+          <div>
+            <label style="font-size:.78rem;font-weight:600;color:var(--g6);display:block;margin-bottom:3px">หมายเหตุ</label>
+            <input type="text" id="eeNote" placeholder="หมายเหตุ / ชื่ออาจารย์..." style="width:100%;font-size:.85rem;padding:6px 9px">
+          </div>
         </div>
+      </div>
+
+      <!-- Pane: จาก Template -->
+      <div id="eePaneTpl" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <select id="eeTplCat" onchange="renderEeTplList()" style="font-size:.82rem;padding:5px 8px">
+            <option value="">— ทุกหมวด —</option>
+          </select>
+          <select id="eeTplDoc" onchange="renderEeTplItems()" style="font-size:.82rem;padding:5px 8px">
+            <option value="">— เลือก Template —</option>
+          </select>
+        </div>
+        <div id="eeTplItemList" style="max-height:280px;overflow-y:auto;border:1.5px solid var(--g3);border-radius:var(--r)">
+          <div style="text-align:center;padding:20px;color:var(--g4);font-size:.82rem">เลือก Template ก่อน</div>
+        </div>
+        <div style="margin-top:8px;font-size:.75rem;color:var(--g4)">✅ ติ๊กเลือกรายการที่ต้องการเพิ่ม · รายการซ้ำจะรวมจำนวนอัตโนมัติ</div>
       </div>
     </div>
     <div class="mf">
       <button class="btn bs" onclick="closeModal('modalEditEntry')">ยกเลิก</button>
-      <button class="btn bpu" onclick="saveEditEntry()" style="background:var(--primary);color:#fff;border-color:var(--primary)">
+      <button class="btn bpu" id="eeSaveBtn" onclick="saveEditEntry()" style="background:var(--primary);color:#fff;border-color:var(--primary)">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:3px"><polyline points="20 6 9 17 4 12"/></svg>
         บันทึก
       </button>
@@ -6406,6 +6438,60 @@ function onTplCatChange(cat, keepVal) {
   if (!prevVal) { sel.value = ''; }
 }
 
+/* ── Edit Entry Modal: Tab & Template ── */
+function swEeTab(tab) {
+  const isSearch = tab === 'search';
+  document.getElementById('eePaneSearch').style.display = isSearch ? '' : 'none';
+  document.getElementById('eePaneTpl').style.display    = isSearch ? 'none' : '';
+  const btnS = document.getElementById('eeTabSearch');
+  const btnT = document.getElementById('eeTabTpl');
+  if (btnS) { btnS.style.color = isSearch?'var(--primary)':'var(--g4)'; btnS.style.borderBottomColor = isSearch?'var(--primary)':'transparent'; }
+  if (btnT) { btnT.style.color = isSearch?'var(--g4)':'var(--primary)'; btnT.style.borderBottomColor = isSearch?'transparent':'var(--primary)'; }
+  if (!isSearch) initEeTplDropdowns();
+}
+
+function initEeTplDropdowns() {
+  const catSel = document.getElementById('eeTplCat');
+  if (!catSel) return;
+  const cats = [...new Set(doctors.map(d => d.cat || d.type || 'อื่นๆ'))].sort((a,b) => {
+    const oa = catOrder.indexOf(a), ob = catOrder.indexOf(b);
+    if (oa !== -1 && ob !== -1) return oa - ob;
+    if (oa !== -1) return -1; if (ob !== -1) return 1;
+    return a.localeCompare(b,'th');
+  });
+  catSel.innerHTML = '<option value="">— ทุกหมวด —</option>' + cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  renderEeTplList();
+}
+
+function renderEeTplList() {
+  const cat = document.getElementById('eeTplCat')?.value || '';
+  const docSel = document.getElementById('eeTplDoc');
+  if (!docSel) return;
+  const filtered = cat ? doctors.filter(d => (d.cat||d.type||'อื่นๆ') === cat) : doctors;
+  docSel.innerHTML = '<option value="">— เลือก Template —</option>' +
+    filtered.map(d => `<option value="${d.id}">${esc(d.name)}</option>`).join('');
+  document.getElementById('eeTplItemList').innerHTML = '<div style="text-align:center;padding:20px;color:var(--g4);font-size:.82rem">เลือก Template ก่อน</div>';
+}
+
+function renderEeTplItems() {
+  const docId = document.getElementById('eeTplDoc')?.value;
+  const list  = document.getElementById('eeTplItemList');
+  if (!list) return;
+  if (!docId) { list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--g4);font-size:.82rem">เลือก Template ก่อน</div>'; return; }
+  const doc = doctors.find(d => d.id === docId);
+  if (!doc || !doc.items?.length) { list.innerHTML = '<div style="text-align:center;padding:16px;color:var(--g4);font-size:.82rem">ไม่มีรายการใน Template นี้</div>'; return; }
+  list.innerHTML = doc.items.map((item, idx) =>
+    `<label style="display:flex;align-items:center;gap:8px;padding:7px 11px;border-bottom:1px solid var(--g2);cursor:pointer;font-size:.82rem;background:#fff" onmouseover="this.style.background='var(--primary-b)'" onmouseout="this.style.background='#fff'">
+      <input type="checkbox" data-idx="${idx}" data-code="${esc(item.n||'')}" data-desc="${esc(item.d||'')}" style="width:15px;height:15px;flex-shrink:0">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--info);background:var(--info-b);padding:1px 6px;border-radius:4px;flex-shrink:0">${item.n||'—'}</span>
+      <span style="flex:1">${esc(item.d||'')}</span>
+      <input type="number" min="1" step="1" value="${item.qty||1}" placeholder="จำนวน"
+        style="width:56px;padding:3px 5px;border:1.5px solid var(--g3);border-radius:5px;font-size:.82rem;text-align:center"
+        onclick="event.stopPropagation()" onchange="event.stopPropagation()">
+    </label>`
+  ).join('');
+}
+
 /* ══════════════════════════════════════════
    HISTORY — BATCH ACTIONS
 ══════════════════════════════════════════ */
@@ -6424,6 +6510,8 @@ function openAddEntryToBatch(batchKey, date, type) {
   document.getElementById('eeQty').value   = '';
   document.getElementById('eeNote').value  = '';
   document.getElementById('eeSearchRes').style.display = 'none';
+  // Reset to search tab
+  swEeTab('search');
   const modal = document.getElementById('modalEditEntry');
   if (modal) { modal._addMode = true; modal._batchKey = batchKey; }
   modal?.classList.add('open');
@@ -7823,33 +7911,95 @@ function openEditEntry(id) {
 }
 
 function saveEditEntry() {
-  const modal  = document.getElementById('modalEditEntry');
-  const date   = document.getElementById('eeDate').value;
-  const type   = document.getElementById('eeType').value;
-  const code   = document.getElementById('eeCode').value.trim();
-  const desc   = document.getElementById('eeDesc').value.trim();
-  const qty    = parseFloat(document.getElementById('eeQty').value);
-  const note   = document.getElementById('eeNote').value.trim();
+  const modal = document.getElementById('modalEditEntry');
+  const date  = document.getElementById('eeDate').value;
+  const type  = document.getElementById('eeType').value;
+  const note  = document.getElementById('eeNote')?.value.trim() || '';
 
   if (!date) { showT('กรุณาระบุวันที่', 'e'); return; }
-  if (!desc && !code) { showT('กรุณาระบุรายการ', 'e'); return; }
-  if (!qty || qty <= 0) { showT('กรุณาระบุจำนวน', 'e'); return; }
+
+  // ── ตรวจว่าอยู่ใน tab ไหน ──
+  const isTplTab = document.getElementById('eePaneTpl')?.style.display !== 'none';
 
   if (modal._addMode) {
-    // Add new entry — check if adding to existing batch
     const bKey = modal._batchKey || ('B' + Date.now());
-    const newEntry = {
-      id: Date.now(),
-      batchId: bKey,
-      date, type, item_no: code, desc: desc || code,
-      qty, note, savedAt: new Date().toLocaleString('th-TH'),
-      caseLabel: note
-    };
-    saved.push(newEntry);
-    modal._batchKey = null;
-    showT('✅ เพิ่มรายการแล้ว', 'ok');
+
+    if (isTplTab) {
+      // ── เพิ่มจาก Template ──
+      const checkboxes = document.querySelectorAll('#eeTplItemList input[type=checkbox]:checked');
+      if (!checkboxes.length) { showT('กรุณาเลือกรายการอย่างน้อย 1 รายการ', 'e'); return; }
+
+      const now = new Date().toLocaleString('th-TH');
+      let addedCount = 0, mergedCount = 0;
+
+      checkboxes.forEach(cb => {
+        const itemCode = cb.dataset.code;
+        const itemDesc = cb.dataset.desc;
+        const qtyInput = cb.closest('label')?.querySelector('input[type=number]');
+        const qty = parseFloat(qtyInput?.value) || 1;
+
+        // ── รวมจำนวนถ้ารายการซ้ำใน batch เดียวกัน ──
+        const existing = saved.find(s =>
+          (s.batchId || s.savedAt) === bKey &&
+          s.item_no === itemCode && s.type === type
+        );
+        if (existing) {
+          existing.qty = (existing.qty || 0) + qty;
+          mergedCount++;
+        } else {
+          saved.push({
+            id: Date.now() + addedCount,
+            batchId: bKey,
+            date, type,
+            item_no: itemCode,
+            desc: itemDesc || itemCode,
+            qty, note,
+            savedAt: now,
+            caseLabel: note
+          });
+          addedCount++;
+        }
+      });
+
+      modal._batchKey = null;
+      showT(`✅ เพิ่ม ${addedCount} รายการ${mergedCount ? ` · รวมซ้ำ ${mergedCount} รายการ` : ''}`, 'ok');
+
+    } else {
+      // ── เพิ่มจากค้นหา ──
+      const code = document.getElementById('eeCode').value.trim();
+      const desc = document.getElementById('eeDesc').value.trim();
+      const qty  = parseFloat(document.getElementById('eeQty').value);
+      if (!desc && !code) { showT('กรุณาระบุรายการ', 'e'); return; }
+      if (!qty || qty <= 0) { showT('กรุณาระบุจำนวน', 'e'); return; }
+
+      // รวมจำนวนถ้าซ้ำ
+      const existing = saved.find(s =>
+        (s.batchId || s.savedAt) === bKey &&
+        s.item_no === code && s.type === type
+      );
+      if (existing) {
+        existing.qty = (existing.qty || 0) + qty;
+        showT('✅ รวมจำนวนกับรายการเดิมแล้ว', 'ok');
+      } else {
+        saved.push({
+          id: Date.now(),
+          batchId: bKey,
+          date, type, item_no: code, desc: desc || code,
+          qty, note, savedAt: new Date().toLocaleString('th-TH'),
+          caseLabel: note
+        });
+        showT('✅ เพิ่มรายการแล้ว', 'ok');
+      }
+      modal._batchKey = null;
+    }
+
   } else {
-    // Edit existing
+    // ── แก้ไขรายการเดิม ──
+    const code = document.getElementById('eeCode').value.trim();
+    const desc = document.getElementById('eeDesc').value.trim();
+    const qty  = parseFloat(document.getElementById('eeQty').value);
+    if (!desc && !code) { showT('กรุณาระบุรายการ', 'e'); return; }
+    if (!qty || qty <= 0) { showT('กรุณาระบุจำนวน', 'e'); return; }
     const idx = saved.findIndex(s => s.savedAt === modal._editId || s.id === modal._editId);
     if (idx < 0) { showT('ไม่พบรายการ', 'e'); return; }
     saved[idx] = { ...saved[idx], date, type, item_no: code, desc: desc || code, qty, note };

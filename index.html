@@ -4543,6 +4543,9 @@ document.addEventListener('DOMContentLoaded', () => {
   uz.addEventListener('dragleave', () => uz.classList.remove('do'));
   uz.addEventListener('drop', e => { e.preventDefault(); uz.classList.remove('do'); hFiles(e.dataTransfer.files); });
 
+  // ── อัปเดต Min/Max จากข้อมูล Excel ──
+  applyMinMaxUpdates();
+
   updSum();
   rHist();
   renderDocGrid();
@@ -5578,7 +5581,6 @@ function moveDoc(docId, dir) {
 }
 
 function moveCat(cat, dir) {
-  // Collect ALL visible cats (doctors + presets if shown)
   const allSrc = showPresets ? [...PRESET_TEMPLATES, ...doctors] : doctors;
   const allCats = [...new Set(allSrc.map(d => (d.cat||'').trim() || '(ยังไม่จัดหมวดหมู่)'))].filter(c => c !== '(ยังไม่จัดหมวดหมู่)');
   allCats.forEach(c => { if (!catOrder.includes(c)) catOrder.push(c); });
@@ -5590,6 +5592,8 @@ function moveCat(cat, dir) {
   [catOrder[idx], catOrder[swap]] = [catOrder[swap], catOrder[idx]];
   saveCatOrder();
   renderDocGrid();
+  // ── บัค 2: อัปเดต dropdown หมวดหมู่ในหน้าบันทึก ──
+  updateDocSelects();
 }
 
 function toggleCatGrp(cat) {
@@ -6403,7 +6407,39 @@ function onTplCatChange(cat, keepVal) {
 }
 
 /* ══════════════════════════════════════════
-   HISTORY
+   HISTORY — BATCH ACTIONS
+══════════════════════════════════════════ */
+// ── บัค 1: เพิ่มรายการใน batch ──
+let _addToBatchKey = null, _addToBatchDate = null, _addToBatchType = null;
+
+function openAddEntryToBatch(batchKey, date, type) {
+  _addToBatchKey  = batchKey;
+  _addToBatchDate = date;
+  _addToBatchType = type;
+  document.getElementById('editEntryTitle').textContent = '➕ เพิ่มรายการใน batch';
+  document.getElementById('eeDate').value  = date || '';
+  document.getElementById('eeType').value  = type || 'issue';
+  document.getElementById('eeCode').value  = '';
+  document.getElementById('eeDesc').value  = '';
+  document.getElementById('eeQty').value   = '';
+  document.getElementById('eeNote').value  = '';
+  document.getElementById('eeSearchRes').style.display = 'none';
+  const modal = document.getElementById('modalEditEntry');
+  if (modal) { modal._addMode = true; modal._batchKey = batchKey; }
+  modal?.classList.add('open');
+}
+
+function deleteBatch(batchKey) {
+  if (!confirm('ลบรายการทั้งหมดใน batch นี้?')) return;
+  saved = saved.filter(s => (s.batchId || s.savedAt) !== batchKey);
+  localStorage.setItem('orSE', JSON.stringify(saved));
+  if (window._fbWrite) window._fbWrite('orSE', saved);
+  updSum(); rHist(); rHistDay();
+  showT('🗑️ ลบ batch แล้ว', 'ok');
+}
+
+/* ══════════════════════════════════════════
+   HISTORY — BATCH ACTIONS (end)
 ══════════════════════════════════════════ */
 
 /* ══════════════════════════════════════════
@@ -6467,16 +6503,18 @@ function saveEditItem() {
     if (code !== _editItemCode) {
       const dup = ITEMS.find((i,ii) => i.n === code && ii !== idx);
       if (dup) { warn.style.display=''; warn.textContent='รหัส '+code+' มีอยู่แล้ว: "'+dup.d+'"'; return; }
-      saved.forEach(s => { if (s.item_no === _editItemCode) s.item_no = code; });
+      // อัปเดต item_no ใน saved ด้วย
+      saved = saved.map(s => s.item_no === _editItemCode ? {...s, item_no: code} : s);
       localStorage.setItem('orSE', JSON.stringify(saved));
       if (window._fbWrite) window._fbWrite('orSE', saved);
-    if (window._fbWrite) window._fbWrite('orSE', saved);
     }
     ITEMS[idx] = {...ITEMS[idx], n:code, d:desc, uom, min, max};
     showT('แก้ไข '+code+' แล้ว', 'ok');
   }
+  // ── บัค 3&4: Rebuild search index + sync Firebase ──
   if (window.ITOK) window.ITOK = ITEMS.map(i => ({...i, tk: tok(i.d+' '+i.n)}));
   saveItems();
+  if (window._fbWrite) window._fbWrite('orItems', ITEMS);
   closeModal('modalEditItem');
   rItems();
 }
@@ -7798,12 +7836,17 @@ function saveEditEntry() {
   if (!qty || qty <= 0) { showT('กรุณาระบุจำนวน', 'e'); return; }
 
   if (modal._addMode) {
-    // Add new entry
+    // Add new entry — check if adding to existing batch
+    const bKey = modal._batchKey || ('B' + Date.now());
     const newEntry = {
+      id: Date.now(),
+      batchId: bKey,
       date, type, item_no: code, desc: desc || code,
-      qty, note, savedAt: new Date().toISOString(), batchId: new Date().toISOString()
+      qty, note, savedAt: new Date().toLocaleString('th-TH'),
+      caseLabel: note
     };
     saved.push(newEntry);
+    modal._batchKey = null;
     showT('✅ เพิ่มรายการแล้ว', 'ok');
   } else {
     // Edit existing
@@ -7816,7 +7859,7 @@ function saveEditEntry() {
   localStorage.setItem('orSE', JSON.stringify(saved));
   if (window._fbWrite) window._fbWrite('orSE', saved);
   closeModal('modalEditEntry');
-  updSum(); rHist();
+  updSum(); rHist(); rHistDay();
 }
 
 function deleteEntry(id) {
@@ -7861,6 +7904,29 @@ function eePick(code, desc) {
   document.getElementById('eeDesc').value = desc;
   document.getElementById('eeSearchRes').style.display = 'none';
 }
+
+/* ══════════════════════════════════════════
+   MIN/MAX UPDATE FROM EXCEL DATA
+══════════════════════════════════════════ */
+function applyMinMaxUpdates() {
+  const _MM = 
+{"MS1221": {"max": 200, "min": 100}, "MS1282": {"max": 30, "min": 15}, "MS1283": {"max": 20, "min": 10}, "MS1080": {"max": 100, "min": 100}, "MS1417": {"max": 50, "min": 20}, "MS1188": {"max": 50, "min": 25}, "MS1400": {"max": 100, "min": 60}, "MS1309": {"max": 80, "min": 40}, "MS2002": {"max": 10, "min": 5}, "MS2001": {"max": 10, "min": 5}, "MS2004": {"max": 2, "min": 1}, "MS1193": {"max": 60, "min": 60}, "MS1189": {"max": 30, "min": 12}, "MS1190": {"max": 60, "min": 60}, "MS1191": {"max": 30, "min": 12}, "MS1328": {"max": 60, "min": 30}, "MS1045": {"max": 60, "min": 60}, "MS1039": {"max": 100, "min": 100}, "MS1041": {"max": 4, "min": 2}, "MS1032": {"max": 2, "min": 1}, "MS1033": {"max": 2, "min": 1}, "MS1034": {"max": 2, "min": 1}, "MS1327": {"max": 3, "min": 1}, "MS1371": {"max": 20, "min": 10}, "MS1388": {"max": 24, "min": 12}, "MS1305": {"max": 48, "min": 18}, "MS1307": {"max": 24, "min": 12}, "MS1012": {"max": 12, "min": 6}, "MS1029": {"max": 12, "min": 6}, "MS1303": {"max": 48, "min": 18}, "MS1174": {"max": 12, "min": 6}, "MS1220": {"max": 12, "min": 6}, "MS1301": {"max": 12, "min": 6}, "MS1304": {"max": 24, "min": 12}, "MS1361": {"max": 12, "min": 6}, "MS1219": {"max": 60, "min": 18}, "MS1255": {"max": 12, "min": 6}, "MS1306": {"max": 18, "min": 6}, "MS1308": {"max": 24, "min": 12}, "MS1360": {"max": 12, "min": 6}, "MS1362": {"max": 48, "min": 18}, "MS1374": {"max": 12, "min": 6}, "MS1397": {"max": 36, "min": 12}, "MS1405": {"max": 12, "min": 6}, "MS1406": {"max": 12, "min": 6}, "MS1415": {"max": 60, "min": 24}, "MS1418": {"max": 36, "min": 12}, "MS1413": {"max": 24, "min": 12}, "MS1082": {"max": 12, "min": 6}, "MS1097": {"max": 24, "min": 12}, "MS1179": {"max": 2, "min": 1}, "MS1018": {"max": 5, "min": 2}, "MS1226": {"max": 10, "min": 5}, "MS1349": {"max": 2, "min": 1}, "MS1350": {"max": 2, "min": 1}, "MS1353": {"max": 2, "min": 1}, "MS1322": {"max": 2, "min": 1}, "MS1323": {"max": 2, "min": 1}, "MS1352": {"max": 2, "min": 1}, "MS1298": {"max": 20, "min": 10}, "MS1299": {"max": 10, "min": 5}, "MS1168": {"max": 2, "min": 1}, "MS1241": {"max": 5, "min": 2}, "MS1242": {"max": 5, "min": 2}, "MS1373": {"max": 10, "min": 5}, "MS1378": {"max": 10, "min": 5}, "MS1340": {"max": 100, "min": 50}, "MS1363": {"max": 5, "min": 2}, "MS1364": {"max": 5, "min": 2}, "MS1106": {"max": 2, "min": 1}, "MS1107": {"max": 2, "min": 1}, "MS1108": {"max": 2, "min": 1}, "MS1075": {"max": 20, "min": 10}, "MS1076": {"max": 20, "min": 10}, "MS1077": {"max": 20, "min": 10}, "MS1347": {"max": 10, "min": 5}, "MS1348": {"max": 10, "min": 5}, "MS1258": {"max": 10, "min": 5}, "MS1259": {"max": 2, "min": 1}, "MS1261": {"max": 10, "min": 5}, "MS1263": {"max": 2, "min": 1}, "MS1260": {"max": 10, "min": 5}, "MS1262": {"max": 10, "min": 5}, "MS1264": {"max": 10, "min": 5}, "MS1383": {"max": 2, "min": 1}, "MS1384": {"max": 2, "min": 1}, "MS1385": {"max": 2, "min": 1}, "MS1386": {"max": 2, "min": 1}, "MS1355": {"max": 12, "min": 6}, "MS1356": {"max": 12, "min": 6}, "MS1292": {"max": 12, "min": 6}, "MS1157": {"max": 12, "min": 6}, "MS1098": {"max": 2, "min": 1}, "MS1235": {"max": 10, "min": 5}, "MS1284": {"max": 20, "min": 10}, "MS1293": {"max": 20, "min": 10}, "MS1236": {"max": 20, "min": 10}, "MS1091": {"max": 20, "min": 10}, "MS1288": {"max": 20, "min": 10}, "MS1294": {"max": 20, "min": 10}, "MS1250": {"max": 12, "min": 6}, "MS1251": {"max": 12, "min": 6}, "MS1252": {"max": 12, "min": 6}, "MS1253": {"max": 12, "min": 6}, "MS1182": {"max": 200, "min": 100}, "MS1181": {"max": 200, "min": 100}, "MS1084": {"max": 200, "min": 50}, "MS1083": {"max": 200, "min": 50}, "MS1281": {"max": 2, "min": 1}, "MS1071": {"max": 4, "min": 2}, "MS1070": {"max": 4, "min": 2}, "MS1398": {"max": 50, "min": 25}, "MS1399": {"max": 50, "min": 25}, "MS2014": {"max": 2, "min": 1}, "MS2015": {"max": 2, "min": 1}, "MS2009": {"max": 2, "min": 1}, "MS2010": {"max": 2, "min": 1}, "MS2011": {"max": 2, "min": 1}, "MS2012": {"max": 2, "min": 1}, "MS2013": {"max": 2, "min": 1}, "MS1345": {"max": 2, "min": 1}, "MS1015": {"max": 2, "min": 1}, "MS1043": {"max": 2, "min": 1}, "MS1016": {"max": 4, "min": 2}, "MS1017": {"max": 4, "min": 2}, "MS1341": {"max": 100, "min": 50}, "MS1381": {"max": 2, "min": 1}, "MS1382": {"max": 2, "min": 1}, "MS1051": {"max": 2, "min": 1}, "MS1134": {"max": 4, "min": 2}, "MS1133": {"max": 4, "min": 2}, "MS1132": {"max": 4, "min": 2}, "MS1208": {"max": 100, "min": 50}, "MS1197": {"max": 100, "min": 100}, "MS1196": {"max": 100, "min": 50}, "MS1199": {"max": 100, "min": 50}, "MS1202": {"max": 100, "min": 50}, "MS1201": {"max": 100, "min": 50}, "MS1204": {"max": 100, "min": 50}, "MS1206": {"max": 100, "min": 50}, "MS1207": {"max": 100, "min": 50}, "MS1163": {"max": 50, "min": 25}, "MS1164": {"max": 50, "min": 25}, "MS1165": {"max": 50, "min": 25}, "MS1166": {"max": 50, "min": 25}, "MS1026": {"max": 30, "min": 15}, "MS1159": {"max": 100, "min": 50}, "MS1277": {"max": 150, "min": 75}, "MS1357": {"max": 150, "min": 75}, "MS1267": {"max": 30, "min": 15}, "MS1268": {"max": 100, "min": 50}, "MS1269": {"max": 30, "min": 15}, "MS1313": {"max": 30, "min": 15}, "MS1272": {"max": 50, "min": 25}, "MS1286": {"max": 50, "min": 25}, "MS1287": {"max": 50, "min": 25}, "MS1407": {"max": 50, "min": 25}, "MS1359": {"max": 50, "min": 25}, "MS1116": {"max": 50, "min": 25}, "MS1117": {"max": 50, "min": 25}, "MS1118": {"max": 50, "min": 25}, "MS1119": {"max": 50, "min": 25}, "MS1120": {"max": 50, "min": 25}, "MS1121": {"max": 50, "min": 25}, "MS1122": {"max": 50, "min": 25}, "MS1123": {"max": 50, "min": 25}, "MS1140": {"max": 50, "min": 25}, "MS1326": {"max": 12, "min": 6}, "MS1094": {"max": 50, "min": 25}, "MS2005": {"max": 50, "min": 25}, "MS2006": {"max": 50, "min": 25}, "MS2007": {"max": 50, "min": 25}, "MS1247": {"max": 100, "min": 50}, "MS1377": {"max": 10, "min": 5}, "MI0002": {"max": 10, "min": 5}, "MD0005": {"max": 2, "min": 1}, "MD0002": {"max": 2, "min": 1}, "MD0064": {"max": 30, "min": 15}, "MO0001": {"max": 4, "min": 2}, "MD0016": {"max": 4, "min": 2}, "MI0012": {"max": 20, "min": 10}, "MI0023": {"max": 6, "min": 3}, "MI0025": {"max": 30, "min": 10}, "MI0057": {"max": 10, "min": 5}, "MI0058": {"max": 10, "min": 5}, "MI0031": {"max": 12, "min": 6}, "MO0002": {"max": 4, "min": 2}, "MI0033": {"max": 40, "min": 20}, "MI0036": {"max": 6, "min": 3}, "MI0056": {"max": 2, "min": 1}, "MD0038": {"max": 4, "min": 2}, "MD0043": {"max": 2, "min": 1}, "MD0033": {"max": 4, "min": 2}, "MD0053": {"max": 2, "min": 1}, "MD0054": {"max": 2, "min": 1}, "MO0005": {"max": 4, "min": 2}, "MD0061": {"max": 2, "min": 1}, "MI0079": {"max": 4, "min": 2}, "MD0060": {"max": 2, "min": 1}, "MD0062": {"max": 2, "min": 1}, "MI0028": {"max": 2, "min": 1}, "MG0003": {"max": 2, "min": 1}, "MD0065": {"max": 6, "min": 3}, "MD0010": {"max": 2, "min": 1}, "MD0052": {"max": 4, "min": 2}, "MX0007": {"max": 2, "min": 1}, "MD0040": {"max": 2, "min": 1}, "MD0042": {"max": 2, "min": 1}, "MD0066": {"max": 4, "min": 2}, "MI0027": {"max": 30, "min": 10}, "MD0022": {"max": 2, "min": 1}, "MD0075": {"max": 90, "min": 30}, "MT0025": {"max": 30, "min": 10}, "MT0014": {"max": 2, "min": 1}, "MT0024": {"max": 5, "min": 2}, "MT0008": {"max": 5, "min": 2}, "MT0022": {"max": 10, "min": 5}, "MT0017": {"max": 10, "min": 5}, "MI0005": {"max": 3, "min": 1}, "MI0055": {"max": 3, "min": 1}, "MS1325": {"max": 1, "min": 1}, "MI0044": {"max": 10, "min": 5}, "MI0043": {"max": 10, "min": 5}, "MI0011": {"max": 10, "min": 5}, "MI0065": {"max": 5, "min": 2}, "MI0066": {"max": 5, "min": 2}, "MI0062": {"max": 4, "min": 2}, "MI0063": {"max": 4, "min": 2}, "MX0022": {"max": 2, "min": 1}, "MP0006": {"max": 100, "min": 100}, "MP0005": {"max": 10, "min": 10}, "MX0012": {"max": 100, "min": 50}, "MI0060": {"max": 15, "min": 5}, "MX0011": {"max": 6, "min": 3}, "MD0044": {"max": 25, "min": 25}, "MD0045": {"max": 25, "min": 25}, "MX0014": {"max": 6, "min": 3}, "MX0006": {"max": 2, "min": 1}, "MX0015": {"max": 2, "min": 1}, "MI0051": {"max": 15, "min": 5}, "MX0018": {"max": 15, "min": 5}, "MX0008": {"max": 6, "min": 3}, "MX0002": {"max": 2, "min": 1}, "ML0001": {"max": 2, "min": 1}, "MX0010": {"max": 2, "min": 1}, "MX0004": {"max": 2, "min": 1}, "MS1049": {"max": 100, "min": 50}, "MX0005": {"max": 2, "min": 1}, "MS1147": {"max": 2, "min": 1}, "MP0004": {"max": 15, "min": 5}, "MX0016": {"max": 4, "min": 2}, "MX0013": {"max": 4, "min": 2}, "MS1081": {"max": 50, "min": 50}, "MS1300": {"max": 16, "min": 8}, "MS1401": {"max": 16, "min": 8}, "MS1379": {"max": 100, "min": 100}, "MS1319": {"max": 12, "min": 6}, "MS1338": {"max": 50, "min": 50}, "MS1170": {"max": 2, "min": 1}, "MS1229": {"max": 2, "min": 1}, "MS1420": {"max": 20, "min": 10}, "MI0041": {"max": 10, "min": 5}, "MI0007": {"max": 10, "min": 5}, "MI0017": {"max": 10, "min": 5}, "MI0053": {"max": 6, "min": 3}, "MI0014": {"max": 10, "min": 5}, "MI0009": {"max": 10, "min": 5}, "MI0003": {"max": 2, "min": 1}, "MI0013": {"max": 15, "min": 5}, "MI0004": {"max": 15, "min": 5}, "MI0039": {"max": 10, "min": 5}, "MI0047": {"max": 15, "min": 5}, "MI0059": {"max": 15, "min": 5}, "MI0030": {"max": 15, "min": 5}, "MI0042": {"max": 10, "min": 5}, "MI0040": {"max": 10, "min": 5}, "MI0026": {"max": 6, "min": 3}, "MS1079": {"max": 2, "min": 1}, "MI0070": {"max": 10, "min": 5}, "MI0071": {"max": 15, "min": 5}, "MX0020": {"max": 2, "min": 1}, "MP0007": {"max": 2, "min": 1}, "MI0068": {"max": 10, "min": 5}, "MI0074": {"max": 5, "min": 2}}
+;
+  let updated = 0;
+  ITEMS.forEach(item => {
+    const code = (item.n || '').trim().toUpperCase();
+    if (_MM[code]) {
+      if (_MM[code].max !== null && item.max !== _MM[code].max) { item.max = _MM[code].max; updated++; }
+      if (_MM[code].min !== null && item.min !== _MM[code].min) { item.min = _MM[code].min; updated++; }
+    }
+  });
+  if (updated > 0) {
+    saveItems();
+    if (window._fbWrite) window._fbWrite('orItems', ITEMS);
+    console.log('[MinMax] อัปเดต', updated, 'fields ใน ITEMS แล้ว');
+  }
+}
+
 
 /* ══════════════════════════════════════════
    FILE ATTACHMENT — Apps Script Upload

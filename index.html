@@ -7112,7 +7112,10 @@ function expXLSX(dateFilter) {
       if (s.type === 'receive') map[key][dayNum].recv += (s.qty||0);
       else map[key][dayNum].issue += (s.qty||0);
     };
-    add(txByNo,   (s.item_no||'').trim().toUpperCase());
+    // normalize: ใช้ทั้ง original case และ uppercase เพื่อ match ได้ทุก format
+    const no = (s.item_no||'').trim();
+    add(txByNo, no.toUpperCase());
+    if (no !== no.toUpperCase()) add(txByNo, no); // keep original too
     add(txByDesc, (s.desc||s.origName||'').trim().toLowerCase());
   });
 
@@ -7215,7 +7218,7 @@ function expXLSX(dateFilter) {
     const r   = idx + 6;
     const no  = (item.n||'').trim().toUpperCase();
     const dsc = (item.d||'').trim().toLowerCase();
-    const dd  = (no && txByNo[no]) || txByDesc[dsc] || {};
+    const dd  = (no && (txByNo[no] || txByNo[no.toLowerCase()])) || txByDesc[dsc] || {};
 
     // ยอดยกมา = ค่าจาก carryMap (ถ้ามี) + item.bal (ยอดตั้งต้นที่กรอกไว้)
     const carried = carryMap[no] || 0;

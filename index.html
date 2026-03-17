@@ -4586,7 +4586,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (_pb) _pb.textContent = showPresets ? '🙈 ซ่อน Preset' : '📦 แสดง Preset';
   updateDocSelects();
   // Load saved API key
-  const savedKey = localStorage.getItem('orApiKey') || '';
+  const savedKey = localStorage.getItem('orApiKey') || 'AIzaSyD6U8vBVjZpRoUzRUlE43FI_7gUw0a7Oko';
+  if (!localStorage.getItem('orApiKey')) localStorage.setItem('orApiKey', savedKey);
   const keyEl = document.getElementById('apiKey');
   if (keyEl && savedKey) { keyEl.value = savedKey; }
   // Google Drive init
@@ -5064,7 +5065,6 @@ async function analyze() {
   const srEl = document.getElementById('sr');
 
   if (!ra || !rc || !rt2 || !rsd) {
-    console.error('Missing elements:', {ra:!!ra, rc:!!rc, rt2:!!rt2, rsd:!!rsd});
     alert('UI Error — กรุณา reload หน้าแล้วลองใหม่');
     btn.disabled = false;
     btn.innerHTML = '<span class="ico"><svg width="14" height="14"><use href="#ic-analyze"/></svg></span> วิเคราะห์ด้วย AI';
@@ -5077,63 +5077,61 @@ async function analyze() {
   rc.innerHTML = '<div style="text-align:center;padding:28px;color:var(--g4)">AI กำลังอ่านภาพและนับขีด<span class="dot3"></span></div>';
   if (srEl) srEl.style.display = 'none';
 
+  // ── ใช้ Gemini API ──
+  const GEMINI_KEY = localStorage.getItem('orApiKey') || 'AIzaSyD6U8vBVjZpRoUzRUlE43FI_7gUw0a7Oko';
+  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`;
+
+  const PROMPT = `คุณคือผู้ช่วยระบบ Stock Card ห้องผ่าตัดตา (OR) — Bangkok Eye Hospital
+
+**หน้าที่:** อ่านรายการสินค้าและจำนวนในภาพ แล้วรายงานเฉพาะรายการที่มีจำนวนระบุเท่านั้น
+
+**กฎการอ่าน:**
+- รายการที่ช่องจำนวนว่าง = ห้ามรายงาน
+- ตัวเลขที่ถูกขีดฆ่า = ห้ามรายงาน
+- ตัวเลขล้วน เช่น 2, 4 → qty=2, qty=4
+- นิพจน์บวก เช่น 2+1 → qty=3 (รวมให้ด้วย)
+- ขีด Tally: | =1, || =2, ||| =3, |||| =4, ขีดทแยง =5
+- รหัสสินค้า มักเป็น MS####, MI####, MD####, MO####, MP####, MX####
+
+**รูปแบบการตอบ — ตอบเป็น JSON เท่านั้น ไม่มีข้อความอื่น:**
+{"items":[{"name":"ชื่อสินค้า","code":"MS1234","raw":"2+1","qty":3}]}`;
+
   try {
     const imgs = await Promise.all(upFiles.map(f => f2b64(f)));
     let allItems = [];
+
     for (const d of imgs) {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const body = {
+        contents: [{
+          parts: [
+            { text: PROMPT },
+            { inline_data: { mime_type: d.t, data: d.d } }
+          ]
+        }],
+        generationConfig: { temperature: 0.1, maxOutputTokens: 2000 }
+      };
+
+      const res = await fetch(GEMINI_URL, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true'},
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 2000,
-          messages: [{
-            role: 'user',
-            content: [
-              {type: 'image', source: {type: 'base64', media_type: d.t, data: d.d}},
-              {type: 'text', text: `คุณคือผู้ช่วยระบบ Stock Card ห้องผ่าตัดตา (OR) — Bangkok Eye Hospital
-
-**หน้าที่:** อ่านตารางในภาพ แล้วรายงานเฉพาะรายการที่ช่อง "Quantity" มีตัวเลขหรือขีดกำกับเท่านั้น
-
-**ลำดับการอ่านและการ output — สำคัญมาก:**
-ภาพมีตารางหลายคอลัมน์วางเคียงกัน (เช่น PHACO, GLOVE, NEEDLE อยู่ซ้าย / Sharp, Syringe, Suture อยู่ขวา)
-ให้ output รายการตามลำดับนี้:
-1. อ่านคอลัมน์ซ้ายสุด จากบนลงล่างทั้งหมด → output ก่อน
-2. แล้วจึงอ่านคอลัมน์ขวา จากบนลงล่างทั้งหมด → output ต่อ
-ห้ามสลับสับเปลี่ยนลำดับ
-
-**กฎการนับ Quantity:**
-- ช่อง Quantity ว่างเปล่า = ห้ามรายงานเด็ดขาด
-- ตัวเลขที่ถูกขีดฆ่าทับ หรือมีตัวหนังสือ/ลายมือเขียนทับหรือกำกับใกล้ตัวเลข = ห้ามรายงาน
-- รายการที่เขียนเพิ่มด้วยปากกาลงในตาราง หรือนอกตาราง = ห้ามรายงาน (นับเฉพาะรายการที่พิมพ์มาในตารางเท่านั้น)
-- ตัวเลขล้วน เช่น 2, 4 → raw="2", qty=2
-- นิพจน์บวก เช่น 2+1 → raw="2+1", qty=3 (คำนวณรวมให้ด้วย)
-- ขีด Tally: | = 1, || = 2, ||| = 3, |||| = 4, ขีดทแยง = 5 → raw="|||", qty=3
-
-**รหัสสินค้า:** มักเป็น MS####, MI####, MD####
-
-ตอบกลับเป็น JSON เท่านั้น ไม่มีข้อความอื่น:
-{"items":[{"name":"ชื่อสินค้า","code":"MS1234","raw":"2+1","qty":3}]}`}
-            ]
-          }]
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
       });
+
       const data = await res.json();
+
       if (!res.ok || data.error) {
-        const eType = data.error?.type || '';
-        const eMsg  = data.error?.message || JSON.stringify(data.error) || `HTTP ${res.status}`;
-        if (eType === 'exceeded_limit' || eMsg.includes('exceeded_limit') || res.status === 529 || res.status === 429) {
-          throw new Error('__RATE_LIMIT__');
-        }
-        if (res.status === 401) throw new Error('__AUTH__');
+        const eMsg = data.error?.message || `HTTP ${res.status}`;
+        if (res.status === 429) throw new Error('__RATE_LIMIT__');
+        if (res.status === 400 && eMsg.includes('API key')) throw new Error('__AUTH__');
         throw new Error(eMsg);
       }
-      const text = data.content?.map(c => c.text || '').join('') || '';
+
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
       let p;
       try {
         const m = text.replace(/```json|```/g, '').match(/\{[\s\S]*\}/);
         p = JSON.parse(m ? m[0] : text);
-      } catch { p = {items: []}; }
+      } catch { p = { items: [] }; }
       allItems = [...allItems, ...(p.items || [])];
     }
     procResults(allItems);
@@ -5141,16 +5139,12 @@ async function analyze() {
     console.error('AI Error:', err.message);
     let friendlyMsg = '';
     const m = err.message || '';
-    if (m === '__RATE_LIMIT__' || m.includes('exceeded_limit')) {
+    if (m === '__RATE_LIMIT__') {
       friendlyMsg = `<div style="text-align:center;padding:20px 24px">
         <div style="font-size:2rem;margin-bottom:8px">⏳</div>
         <div style="font-weight:700;color:#b45309;font-size:.95rem;margin-bottom:8px">ใช้งาน AI เกินโควต้าชั่วคราว</div>
         <div style="font-size:.83rem;color:var(--g5);line-height:1.6">
-          Anthropic จำกัดการใช้งานต่อ 5 ชั่วโมง<br>
-          กรุณารอสักครู่แล้วลองใหม่ หรือลองใน session ถัดไป
-        </div>
-        <div style="margin-top:12px;padding:8px 16px;background:#fffbeb;border-radius:8px;font-size:.78rem;color:#b45309;border:1px solid #fcd34d">
-          💡 ระหว่างนี้สามารถเพิ่มรายการด้วยมือผ่านปุ่ม <strong>+ เพิ่มรายการ</strong> ได้
+          Gemini ฟรีจำกัด 15 ครั้ง/นาที<br>กรุณารอ 1 นาทีแล้วลองใหม่
         </div>
       </div>`;
     } else if (m === '__AUTH__') {
@@ -7299,17 +7293,17 @@ async function testApiKey() {
   if (!key) { document.getElementById('apiKeyStatus').textContent = '❌ กรุณาใส่ API Key ก่อน'; return; }
   document.getElementById('apiKeyStatus').textContent = '⏳ กำลังทดสอบ...';
   try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
       method: 'POST',
-      headers: {'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body: JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:10,messages:[{role:'user',content:'hi'}]})
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({contents:[{parts:[{text:'hi'}]}]})
     });
     const d = await r.json();
     if (d.error) throw new Error(d.error.message);
     localStorage.setItem('orApiKey', key);
-    document.getElementById('apiKeyStatus').innerHTML = '<span style="color:var(--gd)">✅ API Key ใช้งานได้ — บันทึกแล้ว</span>';
+    document.getElementById('apiKeyStatus').innerHTML = '<span style="color:var(--gd)">✅ Gemini API Key ใช้งานได้ — บันทึกแล้ว</span>';
   } catch(e) {
-    const msg = e.message.includes('Failed to fetch') ? '❌ โรงพยาบาลบล็อก api.anthropic.com — ไม่สามารถใช้ AI อ่านภาพได้' : '❌ ' + e.message;
+    const msg = e.message.includes('Failed to fetch') ? '❌ ไม่สามารถเชื่อมต่อ Gemini API ได้' : '❌ ' + e.message;
     document.getElementById('apiKeyStatus').innerHTML = '<span style="color:var(--rd)">' + msg + '</span>';
   }
 }

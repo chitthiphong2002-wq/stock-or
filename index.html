@@ -7580,16 +7580,32 @@ const GD = {
 function gdInit() {
   const saved_cfg = (() => { try { return JSON.parse(localStorage.getItem('orGD') || '{}'); } catch{ return {}; } })();
   GD.CLIENT_ID = '142005075916-rdf9a8k3kef8rif6d257p2abokh0uga0.apps.googleusercontent.com';
-  GD.autoSave  = saved_cfg.autoSave || false;
-  GD.autoLoad  = saved_cfg.autoLoad || false;
   GD.userEmail = saved_cfg.email || '';
-  // ไม่โหลด token เก่า — token มีอายุ 1 ชั่วโมง reload แล้วหมดอายุแน่นอน
-  // ถ้า autoLoad เปิดอยู่ → silent re-auth ผ่าน GIS แล้วค่อย load
   GD.accessToken = null;
+
+  // ตรวจ scopeVersion — ถ้าเก่ากว่า v2 (drive.appdata) ให้ disable autoLoad/autoSave
+  // เพื่อป้องกัน silent auth แล้วได้ token scope เก่า → 403 loop
+  const SCOPE_VER = 2; // v2 = drive.appdata only
+  if ((saved_cfg.scopeVer || 0) < SCOPE_VER) {
+    // scope เปลี่ยน → ต้อง re-consent → ปิด auto features ไว้ก่อน
+    GD.autoSave = false;
+    GD.autoLoad = false;
+    // อัปเดต localStorage
+    try {
+      const cfg = JSON.parse(localStorage.getItem('orGD') || '{}');
+      cfg.autoSave = false;
+      cfg.autoLoad = false;
+      cfg.scopeVer = SCOPE_VER;
+      localStorage.setItem('orGD', JSON.stringify(cfg));
+    } catch(e) {}
+  } else {
+    GD.autoSave = saved_cfg.autoSave || false;
+    GD.autoLoad = saved_cfg.autoLoad || false;
+  }
+
   gdUpdateUI(false);
 
   if (GD.CLIENT_ID && (GD.autoLoad || GD.autoSave)) {
-    // รอให้ Google GIS script โหลดเสร็จก่อน แล้ว silent re-auth
     gdSilentAuth();
   }
 }
@@ -7623,13 +7639,24 @@ function _gdSilentAuthNow() {
         GD.accessToken = response.access_token;
         GD.fileId = null;
         GD.folderId = null;
+
+        // ตรวจสอบ scope ที่ได้รับ — ต้องมี drive.appdata
+        // (ถ้า user เคย approve scope เก่าไว้ token จะไม่มี appdata → ต้อง re-consent)
         try {
-          const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-            headers: { Authorization: 'Bearer ' + GD.accessToken }
-          });
-          const info = await r.json();
+          const ti = await fetch(
+            'https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=' + GD.accessToken
+          );
+          const info = await ti.json();
+          if (!info.scope || !info.scope.includes('drive.appdata')) {
+            // scope ไม่ถูกต้อง → ล้าง token แล้วแจ้งให้ re-connect
+            GD.accessToken = null;
+            gdUpdateUI(false);
+            showT('🔄 กรุณากดเชื่อมต่อ Google Drive ใหม่ 1 ครั้ง (อัปเดต permission)', 'e');
+            return;
+          }
           GD.userEmail = info.email || GD.userEmail || '';
         } catch(e) {}
+
         gdUpdateUI(true);
         if (GD.autoLoad) gdLoadLatest(true);
       }
@@ -7647,9 +7674,9 @@ function gdSaveConfig() {
     clientId: GD.CLIENT_ID,
     autoSave: GD.autoSave,
     autoLoad: GD.autoLoad,
-    // token: ไม่เซฟ
     email: GD.userEmail,
-    // fileId/folderId: ไม่เซฟ เพราะ token ใหม่อาจไม่มีสิทธิ์
+    scopeVer: 2,   // v2 = drive.appdata only (เปลี่ยน scope ให้เพิ่มตัวเลขนี้)
+    // token/fileId/folderId: ไม่เซฟ
   }));
 }
 
@@ -7758,16 +7785,22 @@ function gdConnect() {
         return;
       }
       GD.accessToken = response.access_token;
-      // ล้าง fileId/folderId เก่า เพราะ token ใหม่อาจไม่มีสิทธิ์
       GD.fileId = null;
       GD.folderId = null;
-      // Get user info
+
+      // ตรวจ scope — ต้องมี drive.appdata ไม่งั้น Backup จะ 403
       try {
-        const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: 'Bearer ' + GD.accessToken }
-        });
-        const info = await r.json();
-        GD.userEmail = info.email || '';
+        const ti = await fetch(
+          'https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=' + GD.accessToken
+        );
+        const info = await ti.json();
+        if (!info.scope || !info.scope.includes('drive.appdata')) {
+          GD.accessToken = null;
+          gdUpdateUI(false);
+          showT('❌ Permission ไม่ถูกต้อง — กรุณากด Disconnect แล้ว Connect ใหม่', 'e');
+          return;
+        }
+        GD.userEmail = info.email || info.sub || '';
       } catch(e) {}
 
       gdSaveConfig();
@@ -7895,6 +7928,7 @@ async function gdGetFileId() {
   const r = await gdFetch(
     `https://www.googleapis.com/drive/v3/files?q=${q}&spaces=appDataFolder&fields=files(id,name,modifiedTime)`
   );
+  // gdFetch throw แล้วสำหรับ 401/403 — ไม่ต้องจัดการที่นี่
   if (!r.ok) return null;
 
   const data = await r.json();

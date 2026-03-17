@@ -867,6 +867,16 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
           <p style="font-size:.74rem;margin-top:4px;color:var(--g4)">รองรับ JPG, PNG — อัพโหลดหลายภาพได้</p>
         </div>
         <div id="pl" style="display:none;margin-top:10px"></div>
+        <!-- API Key inline input -->
+        <div style="margin-top:10px;background:var(--warn-b);border:1.5px solid #fcd34d;border-radius:var(--r);padding:9px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:.75rem;font-weight:700;color:#92400e;white-space:nowrap">🔑 Gemini API Key</span>
+          <input type="password" id="inlineApiKey" placeholder="วาง API Key ที่นี่..."
+            style="flex:1;min-width:180px;padding:5px 10px;border:1.5px solid #fcd34d;border-radius:5px;font-size:.8rem;font-family:'IBM Plex Mono',monospace;background:#fff;color:var(--g8)"
+            oninput="saveInlineKey(this.value)">
+          <button class="btn" onclick="toggleKeyVis()" id="btnKeyVis"
+            style="padding:5px 9px;background:#fff;border:1.5px solid #fcd34d;color:#92400e;font-size:.75rem">👁</button>
+          <span id="inlineKeyStatus" style="font-size:.74rem;color:#92400e;white-space:nowrap"></span>
+        </div>
         <div class="br">
           <button class="btn bp" id="btnA" onclick="analyze()" disabled><span class="ico"><svg width="14" height="14"><use href="#ic-analyze"/></svg></span> วิเคราะห์ด้วย AI</button>
           <button class="btn bs" onclick="clearAll()"><span class="ico"><svg width="14" height="14"><use href="#ic-trash"/></svg></span> ล้าง</button>
@@ -4585,11 +4595,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const _pb = document.getElementById('btnTogglePresets');
   if (_pb) _pb.textContent = showPresets ? '🙈 ซ่อน Preset' : '📦 แสดง Preset';
   updateDocSelects();
-  // Load saved API key
-  const savedKey = localStorage.getItem('orApiKey') || 'AIzaSyD6U8vBVjZpRoUzRUlE43FI_7gUw0a7Oko';
-  if (!localStorage.getItem('orApiKey')) localStorage.setItem('orApiKey', savedKey);
+  // Load saved API key into inline field
+  initInlineKey();
   const keyEl = document.getElementById('apiKey');
-  if (keyEl && savedKey) { keyEl.value = savedKey; }
+  const _savedKey = localStorage.getItem('orApiKey') || '';
+  if (keyEl && _savedKey) { keyEl.value = _savedKey; }
   // Google Drive init
   gdInit();
   const gdTs = localStorage.getItem('orGDLastSync');
@@ -5053,6 +5063,31 @@ function matchItem(aiName, aiCode, aiQty) {
   return {item_no: aiCode || '', desc: aiName || '', qty: aiQty, mType: 'missing', note: 'ไม่พบในระบบ'};
 }
 
+function saveInlineKey(val) {
+  val = val.trim();
+  if (val) {
+    localStorage.setItem('orApiKey', val);
+    document.getElementById('inlineKeyStatus').textContent = '✅ บันทึกแล้ว';
+  } else {
+    localStorage.removeItem('orApiKey');
+    document.getElementById('inlineKeyStatus').textContent = '';
+  }
+}
+
+function toggleKeyVis() {
+  const inp = document.getElementById('inlineApiKey');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function initInlineKey() {
+  const saved = localStorage.getItem('orApiKey') || '';
+  const el = document.getElementById('inlineApiKey');
+  if (el && saved) {
+    el.value = saved;
+    document.getElementById('inlineKeyStatus').textContent = '✅ บันทึกแล้ว';
+  }
+}
+
 async function analyze() {
   if (!upFiles.length) return;
   const btn = document.getElementById('btnA');
@@ -5078,17 +5113,24 @@ async function analyze() {
   if (srEl) srEl.style.display = 'none';
 
   // ── เรียก Gemini API โดยตรง ──
-  const GEMINI_KEY = localStorage.getItem('orApiKey') || 'AIzaSyDscBfF8MjKtMgImH0Awzg4iIcJR4nLiTk';
+  const GEMINI_KEY = localStorage.getItem('orApiKey') || '';
   if (!GEMINI_KEY) {
+    ra.style.display = 'block';
     rc.innerHTML = `<div style="text-align:center;padding:20px 24px">
       <div style="font-size:2rem;margin-bottom:8px">🔑</div>
-      <div style="font-weight:700;color:var(--rd);font-size:.95rem;margin-bottom:8px">ยังไม่ได้ตั้งค่า API Key</div>
-      <div style="font-size:.83rem;color:var(--g5);margin-bottom:14px">กรุณาไปที่ <b>ตั้งค่า → Gemini API Key</b> แล้วใส่ key ของคุณก่อน<br>รับ key ฟรีได้ที่ <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--primary)">aistudio.google.com</a></div>
+      <div style="font-weight:700;color:var(--rd);font-size:.95rem;margin-bottom:8px">กรุณาใส่ Gemini API Key ก่อน</div>
+      <div style="font-size:.83rem;color:var(--g5);margin-bottom:14px">
+        วาง key ในช่อง <b>🔑 Gemini API Key</b> ด้านบน<br>
+        รับ key ฟรีได้ที่ <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--primary)">aistudio.google.com/app/apikey</a>
+      </div>
     </div>`;
-    rt2.textContent = 'วิเคราะห์ไม่สำเร็จ';
+    rt2.textContent = 'ยังไม่มี API Key';
     rsd.className = 'sd er';
     btn.disabled = false;
     btn.innerHTML = '<span class="ico"><svg width="14" height="14"><use href="#ic-analyze"/></svg></span> วิเคราะห์ด้วย AI';
+    // Highlight the key input
+    const keyInp = document.getElementById('inlineApiKey');
+    if (keyInp) { keyInp.focus(); keyInp.style.borderColor='#ef4444'; setTimeout(()=>keyInp.style.borderColor='',2000); }
     return;
   }
   const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`;
@@ -8330,6 +8372,12 @@ function showPinText(show) {
   const tf = document.getElementById('pinTextField');
   if (tf) tf.type = show ? 'text' : 'password';
 }
+// Expose PIN functions globally (needed for inline event handlers)
+window.showPinText   = showPinText;
+window.onPinType     = onPinType;
+window.checkPin      = checkPin;
+window.openChangePin = openChangePin;
+window.saveNewPin    = saveNewPin;
 function updatePinDots(err) {
   for (let i=0;i<4;i++) {
     const d = document.getElementById('pd'+i);

@@ -8585,6 +8585,7 @@ function openSaveAsTemplate(source, batchKey) {
   document.getElementById('satNewFields').style.display = '';
   document.getElementById('satName').value = '';
   document.getElementById('satType').value = '';
+  refreshCatOptions('satCat', 'Phaco / ICL / IVT');
 
   document.getElementById('modalSaveAsTemplate').classList.add('open');
 }
@@ -8848,13 +8849,8 @@ function confirmSaveAsTemplate() {
           </div>
           <div>
             <label style="font-size:.8rem;font-weight:600;color:var(--g6);display:block;margin-bottom:4px">หมวดหมู่</label>
-            <select id="satCat" style="width:100%;padding:7px 10px;border:1.5px solid var(--g3);border-radius:var(--r);font-family:'Sarabun',sans-serif;font-size:.86rem">
-              <option value="Phaco / ICL / IVT">Phaco / ICL / IVT</option>
-              <option value="PPV">PPV (วุ้นตา)</option>
-              <option value="PTG / TX / Oculo">PTG / TX / Oculo</option>
-              <option value="Med">Med</option>
-              <option value="GA">GA</option>
-              <option value="ทั่วไป">ทั่วไป</option>
+            <select id="satCat" style="width:100%;padding:7px 10px;border:1.5px solid var(--g3);border-radius:var(--r);font-family:'Sarabun',sans-serif;font-size:.86rem"
+              onchange="onCatSelectChange('satCat')">
             </select>
           </div>
         </div>

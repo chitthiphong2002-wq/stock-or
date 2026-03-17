@@ -6651,10 +6651,9 @@ function saveEditItem() {
     ITEMS[idx] = {...ITEMS[idx], n:code, d:desc, uom, min, max};
     showT('แก้ไข '+code+' แล้ว', 'ok');
   }
-  // ── บัค 3&4: Rebuild search index + sync Firebase ──
+  // Rebuild search index + sync (saveItems ทำ localStorage + Firebase ในที่เดียว)
   if (window.ITOK) window.ITOK = ITEMS.map(i => ({...i, tk: tok(i.d+' '+i.n)}));
   saveItems();
-  if (window._fbWrite) window._fbWrite('orItems', ITEMS);
   closeModal('modalEditItem');
   rItems();
 }
@@ -8151,7 +8150,6 @@ function applyMinMaxUpdates() {
   });
   if (updated > 0) {
     saveItems();
-    if (window._fbWrite) window._fbWrite('orItems', ITEMS);
     console.log('[MinMax] อัปเดต', updated, 'fields ใน ITEMS แล้ว');
   }
 }

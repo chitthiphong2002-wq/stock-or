@@ -830,6 +830,10 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
             </div>
             <div class="br" id="entryBtns" style="display:none">
               <button class="btn bsv" onclick="saveEntry()"><span class="ico"><svg width="14" height="14"><use href="#ic-save"/></svg></span> บันทึก</button>
+              <button class="btn bx" onclick="openSaveAsTemplate('entry')" title="บันทึกรายการนี้เป็น Template อาจารย์">
+                <span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg></span>
+                สร้าง Template
+              </button>
               <button class="btn bs" onclick="clearEntry()"><span class="ico"><svg width="14" height="14"><use href="#ic-trash"/></svg></span> ล้างทั้งหมด</button>
             </div>
           </div>
@@ -6948,6 +6952,7 @@ function rHistDay() {
           <button onclick="event.stopPropagation();openAddEntryToBatch('${safeKey}','${esc(g.date)}','${esc(g.type)}')" style="padding:2px 9px;border:1.5px solid var(--primary);background:#fff;color:var(--primary);border-radius:5px;cursor:pointer;font-size:.73rem;font-weight:600;font-family:'Sarabun',sans-serif">+ เพิ่ม</button>
           <button onclick="event.stopPropagation();openBatchAttach('${safeKey}')" style="padding:2px 9px;border:1.5px solid var(--accent);background:#fff;color:var(--accent);border-radius:5px;cursor:pointer;font-size:.73rem;font-weight:600;font-family:'Sarabun',sans-serif">📎 แนบ${g.attachments&&g.attachments.length?` (${g.attachments.length})`:''}
           </button>
+          <button onclick="event.stopPropagation();openSaveAsTemplate('batch','${safeKey}')" style="padding:2px 9px;border:1.5px solid var(--success);background:#f0fdf4;color:var(--success);border-radius:5px;cursor:pointer;font-size:.73rem;font-weight:600;font-family:'Sarabun',sans-serif">📋 แบบ</button>
           <button onclick="event.stopPropagation();deleteBatch('${safeKey}')" style="padding:2px 9px;border:1.5px solid #fca5a5;background:#fff8f8;color:var(--danger);border-radius:5px;cursor:pointer;font-size:.73rem;font-weight:600;font-family:'Sarabun',sans-serif">ลบ</button>
           <span class="batch-arrow" style="font-size:.82rem;color:var(--g4)">▼</span>
         </div>
@@ -7150,7 +7155,19 @@ function expXLSX(dateFilter) {
     ws[a] = {t:'n', f: formula};
     if (s) ws[a].s = s;
   }
-  function mg(r1,c1,r2,c2) { mgs.push({s:{r:r1-1,c:c1-1},e:{r:r2-1,c:c2-1}}); }
+  function mg(r1,c1,r2,c2) {
+    if (r1===r2 && c1===c2) return; // skip single-cell
+    if (r1<1||c1<1||r2<r1||c2<c1) return; // invalid range
+    const key = r1+','+c1+','+r2+','+c2;
+    if (mgs._seen && mgs._seen.has(key)) return;
+    if (!mgs._seen) mgs._seen = new Set();
+    // Check overlap with existing merges
+    for (const m of mgs) {
+      if (m.s.r <= r2-1 && m.e.r >= r1-1 && m.s.c <= c2-1 && m.e.c >= c1-1) return;
+    }
+    mgs._seen.add(key);
+    mgs.push({s:{r:r1-1,c:c1-1},e:{r:r2-1,c:c2-1}});
+  }
 
   // ── Row 1: Title (col F) ──
   sc(1, 6, 'ใบ Stock card แผนก OR  ห้องผ่าตัด', {font:{sz:12, name:F}, alignment:aL});
@@ -7159,28 +7176,29 @@ function expXLSX(dateFilter) {
   sc(2, 4, `เดือน  ${monthTH} ${yearTH}`, {font:fN, alignment:aL});
 
   // ── Rows 4-5: Column headers ──
-  // Fixed cols — merge rows 4-5 each
-  const fixedHdrs = [[1,'No.'],[2,'Ref. Code'],[3,'Item No.'],[4,'Item Description'],[5,'ยอด\nยกมา'],[6,'จาก\nคลัง']];
-  fixedHdrs.forEach(([c, v]) => {
-    sc(4, c, v, {font:fN, alignment:aW});
-    mg(4,c,5,c);
+  // Fixed cols — row4 only (ไม่ merge เพื่อหลีกเลี่ยง Excel XML error)
+  [[1,'No.'],[2,'Ref. Code'],[3,'Item No.'],[4,'Item Description'],[5,'ยอดยกมา']].forEach(([c, v]) => {
+    sc(4, c, v, {font:fB, alignment:aW});
+    sc(5, c, '',  {font:fN});
   });
 
   // Day headers
   for (let d = 1; d <= D; d++) {
     const gc = grpC(d), rc = recvC(d), ic = issuC(d);
-    // จากคลัง — merge rows 4-5
-    sc(4, gc, 'จาก\nคลัง', {font:fN, alignment:aW}); mg(4,gc,5,gc);
-    // Day number — merge รับ+จ่าย in row4
-    sc(4, rc, d, {font:fN, alignment:aC}); mg(4,rc,4,ic);
+    // จากคลัง — row 4 only
+    sc(4, gc, 'จากคลัง', {font:fN, alignment:aW});
+    sc(5, gc, '', {font:fN});
+    // Day number — merge รับ+จ่าย in row4 only (2 cols, same row — safe)
+    sc(4, rc, d, {font:fB, alignment:aC}); mg(4,rc,4,ic);
     // รับ / จ่าย in row5
     sc(5, rc, 'รับ',  {font:fN, alignment:aC});
     sc(5, ic, 'จ่าย', {font:fN, alignment:aC});
   }
 
-  // Summary headers — merge rows 4-5
+  // Summary headers — row4 only
   [[CU,'รับ'],[CV,'จ่าย'],[CW,'ยอดคงเหลือ'],[CX,'UOM'],[CY,'MIN'],[CZ,'MAX'],[DA,'Price/Unit'],[DB,'Total Price']].forEach(([c,v]) => {
-    sc(4, c, v, {font:fN, alignment:aW}); mg(4,c,5,c);
+    sc(4, c, v, {font:fB, alignment:aW});
+    sc(5, c, '', {font:fN});
   });
 
   // ── ยอดยกมา: คำนวณจาก saved ทุกรายการก่อนเดือนนี้ ──
@@ -7260,7 +7278,14 @@ function expXLSX(dateFilter) {
 
   // ── Sheet metadata ──
   ws['!ref']    = XLSX.utils.encode_range({s:{r:0,c:0}, e:{r:ALL_ITEMS.length+5, c:DB-1}});
-  ws['!merges'] = mgs;
+  // Deduplicate merges to prevent corrupt XML
+  const mgSeen = new Set();
+  const mgDedup = mgs.filter(m => {
+    const k = `${m.s.r},${m.s.c},${m.e.r},${m.e.c}`;
+    if (mgSeen.has(k)) return false;
+    mgSeen.add(k); return true;
+  });
+  ws['!merges'] = mgDedup;
   ws['!freeze'] = {xSplit:5, ySplit:5};  // freeze at F6
 
   // Column widths — exact from template
@@ -8519,6 +8544,101 @@ function saveNewPin() {
     document.getElementById('pinScreen')?.classList.add('hidden');
   }
 })();
+
+/* ══════════════════════════════════════════
+   SAVE AS TEMPLATE
+══════════════════════════════════════════ */
+let _satSource = null;  // 'entry' | 'batch'
+let _satBatchKey = null;
+
+function openSaveAsTemplate(source, batchKey) {
+  _satSource = source;
+  _satBatchKey = batchKey || null;
+
+  // Build item list
+  let items = [];
+  if (source === 'entry') {
+    items = entryItems.filter(i => i.qty > 0).map(i => ({n: i.n, d: i.d, qty: i.qty}));
+  } else if (source === 'batch' && batchKey) {
+    const bItems = saved.filter(s => (s.batchId || s.savedAt) === batchKey);
+    items = bItems.map(s => ({n: s.item_no || '', d: s.desc || s.origName || '', qty: s.qty || 1}));
+  }
+
+  if (!items.length) { showT('ไม่มีรายการให้สร้าง Template', 'e'); return; }
+
+  // Populate existing docs dropdown
+  const sel = document.getElementById('satExistingDoc');
+  sel.innerHTML = '<option value="">— สร้าง Template ใหม่ —</option>';
+  doctors.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d.id;
+    opt.textContent = d.name + (d.type ? ' (' + d.type + ')' : '');
+    sel.appendChild(opt);
+  });
+
+  // Preview
+  const prev = document.getElementById('satPreview');
+  prev.innerHTML = '<b style="color:var(--g8)">' + items.length + ' รายการ:</b><br>' +
+    items.map((it, i) => `${i+1}. ${it.d} × ${it.qty}`).join('<br>');
+
+  // Show new fields by default
+  document.getElementById('satNewFields').style.display = '';
+  document.getElementById('satName').value = '';
+  document.getElementById('satType').value = '';
+
+  document.getElementById('modalSaveAsTemplate').classList.add('open');
+}
+
+function onSatDocChange() {
+  const val = document.getElementById('satExistingDoc').value;
+  document.getElementById('satNewFields').style.display = val ? 'none' : '';
+}
+
+function confirmSaveAsTemplate() {
+  let items = [];
+  if (_satSource === 'entry') {
+    items = entryItems.filter(i => i.qty > 0).map(i => ({n: i.n, d: i.d, qty: i.qty}));
+  } else if (_satSource === 'batch' && _satBatchKey) {
+    const bItems = saved.filter(s => (s.batchId || s.savedAt) === _satBatchKey);
+    items = bItems.map(s => ({n: s.item_no || '', d: s.desc || s.origName || '', qty: s.qty || 1}));
+  }
+  if (!items.length) { showT('ไม่มีรายการ', 'e'); return; }
+
+  const existingId = document.getElementById('satExistingDoc').value;
+
+  if (existingId) {
+    // เพิ่มเข้า template ที่มีอยู่
+    const doc = doctors.find(d => d.id === existingId);
+    if (!doc) return;
+    // merge: ถ้ามี item เดิมอยู่แล้ว → เพิ่ม qty, ถ้าไม่มี → push ใหม่
+    items.forEach(it => {
+      const ex = doc.items.find(x => x.n === it.n);
+      if (ex) ex.qty = it.qty;
+      else doc.items.push({...it});
+    });
+    saveDocs();
+    closeModal('modalSaveAsTemplate');
+    showT('✅ เพิ่ม ' + items.length + ' รายการเข้า Template "' + doc.name + '" แล้ว', 'ok');
+  } else {
+    // สร้าง template ใหม่
+    const name = document.getElementById('satName').value.trim();
+    if (!name) { showT('กรุณากรอกชื่อ Template', 'e'); return; }
+    const type = document.getElementById('satType').value.trim();
+    const cat  = document.getElementById('satCat').value;
+    const newDoc = {
+      id: 'doc_' + Date.now(),
+      name, type, cat,
+      items: items.map(it => ({...it}))
+    };
+    doctors.push(newDoc);
+    saveDocs();
+    renderDocGrid();
+    updateDocSelects();
+    closeModal('modalSaveAsTemplate');
+    showT('✅ สร้าง Template "' + name + '" (' + items.length + ' รายการ) แล้ว', 'ok');
+  }
+}
+
 </script>
 
 <!-- MODAL: Import Items from Template (grid picker) -->
@@ -8698,6 +8818,52 @@ function saveNewPin() {
     <div class="mf">
       <button class="btn bs" onclick="closeModal('modalChangePin')">ยกเลิก</button>
       <button class="btn bpu" onclick="saveNewPin()">💾 บันทึก PIN ใหม่</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Save as Template -->
+<div class="modal-bg" id="modalSaveAsTemplate" style="z-index:3000">
+  <div class="modal" style="width:min(480px,95vw)">
+    <div class="mh">
+      <span class="mt">📋 สร้าง Template จากรายการนี้</span>
+      <span class="mc" onclick="closeModal('modalSaveAsTemplate')">✕</span>
+    </div>
+    <div class="mb2">
+      <div style="margin-bottom:10px">
+        <label style="font-size:.8rem;font-weight:600;color:var(--g6);display:block;margin-bottom:4px">ใส่ใน Template ที่มีอยู่</label>
+        <select id="satExistingDoc" style="width:100%;padding:7px 10px;border:1.5px solid var(--g3);border-radius:var(--r);font-family:'Sarabun',sans-serif;font-size:.86rem" onchange="onSatDocChange()">
+          <option value="">— สร้าง Template ใหม่ —</option>
+        </select>
+      </div>
+      <div id="satNewFields">
+        <div style="margin-bottom:10px">
+          <label style="font-size:.8rem;font-weight:600;color:var(--g6);display:block;margin-bottom:4px">ชื่อ Template ใหม่ *</label>
+          <input type="text" id="satName" placeholder="เช่น อ.สมชาย ใจดี" style="width:100%;padding:7px 10px;border:1.5px solid var(--g3);border-radius:var(--r);font-family:'Sarabun',sans-serif;font-size:.86rem">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label style="font-size:.8rem;font-weight:600;color:var(--g6);display:block;margin-bottom:4px">ประเภทผ่าตัด</label>
+            <input type="text" id="satType" placeholder="เช่น Phaco, PPV" style="width:100%;padding:7px 10px;border:1.5px solid var(--g3);border-radius:var(--r);font-family:'Sarabun',sans-serif;font-size:.86rem">
+          </div>
+          <div>
+            <label style="font-size:.8rem;font-weight:600;color:var(--g6);display:block;margin-bottom:4px">หมวดหมู่</label>
+            <select id="satCat" style="width:100%;padding:7px 10px;border:1.5px solid var(--g3);border-radius:var(--r);font-family:'Sarabun',sans-serif;font-size:.86rem">
+              <option value="Phaco / ICL / IVT">Phaco / ICL / IVT</option>
+              <option value="PPV">PPV (วุ้นตา)</option>
+              <option value="PTG / TX / Oculo">PTG / TX / Oculo</option>
+              <option value="Med">Med</option>
+              <option value="GA">GA</option>
+              <option value="ทั่วไป">ทั่วไป</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div id="satPreview" style="margin-top:12px;background:var(--g1);border:1px solid var(--g3);border-radius:var(--r);padding:10px;max-height:200px;overflow-y:auto;font-size:.78rem;color:var(--g6)"></div>
+    </div>
+    <div class="mf">
+      <button class="btn bs" onclick="closeModal('modalSaveAsTemplate')">ยกเลิก</button>
+      <button class="btn bsv" onclick="confirmSaveAsTemplate()">💾 บันทึก Template</button>
     </div>
   </div>
 </div>

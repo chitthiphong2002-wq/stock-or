@@ -5077,9 +5077,9 @@ async function analyze() {
   rc.innerHTML = '<div style="text-align:center;padding:28px;color:var(--g4)">AI กำลังอ่านภาพและนับขีด<span class="dot3"></span></div>';
   if (srEl) srEl.style.display = 'none';
 
-  // ── ใช้ Gemini API ──
+  // ── ใช้ Apps Script เป็น Proxy ส่งไป Gemini ──
+  const PROXY_URL = 'https://script.google.com/macros/s/AKfycbzxyZ0k8_HF1RDRXkUmnxLpazVBZr6X45ac62Ke74891z6pjKYgNTkoH7NRyQFOYe4b/exec';
   const GEMINI_KEY = localStorage.getItem('orApiKey') || 'AIzaSyD6U8vBVjZpRoUzRUlE43FI_7gUw0a7Oko';
-  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`;
 
   const PROMPT = `คุณคือผู้ช่วยระบบ Stock Card ห้องผ่าตัดตา (OR) — Bangkok Eye Hospital
 
@@ -5111,10 +5111,10 @@ async function analyze() {
         generationConfig: { temperature: 0.1, maxOutputTokens: 2000 }
       };
 
-      const res = await fetch(GEMINI_URL, {
+      const res = await fetch(PROXY_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify({ action: 'gemini', body })
       });
 
       const data = await res.json();

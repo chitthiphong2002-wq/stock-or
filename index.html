@@ -5727,7 +5727,7 @@ function renderTplItems(doc) {
     var editControls = isPreset ? '' :
       '<input type="number" min="0" step="1" value="' + (item.qty ?? '') + '" placeholder="จำนวน"' +
       ' style="width:62px;font-size:.8rem;padding:2px 5px;text-align:center;border:1px solid var(--g3);border-radius:4px;margin-left:6px"' +
-      ' onchange="updateTplItemQty(\'' + doc.id + '\',' + idx + ',this.value)" title="จำนวนที่ใช้">' +
+      ' oninput="updateTplItemQty(\'' + doc.id + '\',' + idx + ',this.value)" onchange="updateTplItemQty(\'' + doc.id + '\',' + idx + ',this.value)" title="จำนวนที่ใช้">' +
       '<span style="cursor:pointer;color:var(--g4);font-size:.9rem;margin-left:6px"' +
       ' onclick="removeTplItem(\'' + doc.id + '\',' + idx + ')" title="ลบ">✕</span>';
     return '<div class="tpl-row" draggable="true" data-idx="' + idx + '" data-doc-id="' + doc.id + '">' +
@@ -6317,6 +6317,13 @@ function saveTplConfirm() {
   if (!editDocId) return;
   const doc = doctors.find(d => d.id === editDocId);
   if (!doc) return;
+  // Flush ค่าจาก input ที่อาจยังไม่ trigger onchange
+  document.querySelectorAll('#tplItems input[type="number"]').forEach((inp, idx) => {
+    if (doc.items[idx] !== undefined) {
+      const n = parseFloat(inp.value);
+      doc.items[idx].qty = isNaN(n) || inp.value === '' ? undefined : n;
+    }
+  });
   saveDocs();
   gdAutoSaveIfEnabled();
   showT('✅ บันทึก Template "' + doc.name + '" แล้ว', 'ok');

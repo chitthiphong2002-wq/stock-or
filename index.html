@@ -7204,8 +7204,11 @@ function expXLSX(dateFilter) {
   saved.forEach(s => {
     const no2  = (s.item_no||'').trim().toUpperCase();
     const dsc2 = (s.desc||s.origName||'').trim().toLowerCase();
-    if (no2 && existingNos.has(no2))   return; // มีอยู่แล้ว
-    if (!no2 && dsc2 && existingDesc.has(dsc2)) return;
+    if (no2 && existingNos.has(no2))   return; // มี item_no ตรงกัน → ไม่เพิ่ม
+    if (no2 && !existingNos.has(no2) && no2 !== '') {
+      // มี item_no แต่ไม่อยู่ใน ITEMS → เพิ่มเป็น extra จริงๆ
+    } else if (!no2 && dsc2 && existingDesc.has(dsc2)) return; // desc ตรงกัน → ไม่เพิ่ม
+    else if (!no2 && !dsc2) return; // ไม่มีข้อมูลเลย → ข้าม
     const key = no2 || dsc2;
     if (!key || seenExtra.has(key)) return;
     seenExtra.add(key);

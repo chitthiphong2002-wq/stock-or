@@ -795,10 +795,10 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
     <span class="gd-sync-dot err" id="gdDot"></span>
     <span id="gdStatusTxt">ยังไม่เชื่อมต่อ</span>
   </button>
-  <button style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:4px 10px;cursor:pointer;color:#fff;font-size:.72rem;margin-left:5px;font-family:'Sarabun',sans-serif" id="gdSaveBtn" onclick="gdSaveNow()" title="Backup ไป Google Drive">
+  <button style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:4px 10px;cursor:pointer;color:#fff;font-size:.72rem;margin-left:5px;font-family:'Sarabun',sans-serif" id="gdSaveBtn" onclick="requireMasterPin('🔐 ยืนยันเพื่อ Backup ข้อมูล', gdSaveNow)" title="Backup ไป Google Drive">
     💾 Backup
   </button>
-  <button style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:4px 10px;cursor:pointer;color:#fff;font-size:.72rem;margin-left:5px;font-family:'Sarabun',sans-serif" id="gdLoadBtn" onclick="requireMasterPin('⚠️ Restore จะแทนที่ข้อมูลปัจจุบันทั้งหมด — ยืนยัน?', gdLoadLatest)" title="Restore จาก Google Drive">
+  <button style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:4px 10px;cursor:pointer;color:#fff;font-size:.72rem;margin-left:5px;font-family:'Sarabun',sans-serif" id="gdLoadBtn" onclick="requireMasterPin('🔐 ยืนยันเพื่อ Restore — จะทับข้อมูลปัจจุบันทั้งหมด', gdLoadLatest)" title="Restore จาก Google Drive">
     📥 Restore
   </button>
   <span id="gdLastSync" style="font-size:.71rem;color:rgba(255,255,255,.5);margin-left:8px"></span>
@@ -1358,87 +1358,37 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
 
 <!-- MODAL: Google Drive Setup -->
 <div class="modal-bg" id="modalGDrive">
-  <div class="modal" style="width:540px;max-height:90vh;overflow-y:auto">
+  <div class="modal" style="width:400px">
     <div class="mh">
-      <span class="mt">⚙️ ตั้งค่า Google Drive Sync</span>
+      <span class="mt">☁️ Google Drive Backup</span>
       <span class="mc" onclick="closeModal('modalGDrive')">✕</span>
     </div>
     <div class="mb2">
-
-      <!-- Setup Guide -->
-      <div id="gdSetupGuide" style="display:none">
-        <div class="gd-setup-card">
-          <div style="font-weight:700;color:var(--primary);margin-bottom:12px;font-size:.9rem">📋 วิธีสร้าง Google Client ID (ทำครั้งเดียว)</div>
-          <div class="gd-step">
-            <div class="gd-step-num">1</div>
-            <div>ไปที่ <a href="https://console.cloud.google.com/" target="_blank" style="color:var(--primary)">console.cloud.google.com</a> → สร้าง Project ใหม่ (ชื่ออะไรก็ได้)</div>
-          </div>
-          <div class="gd-step">
-            <div class="gd-step-num">2</div>
-            <div>เปิด <strong>APIs &amp; Services → Library</strong> → ค้นหา <strong>"Google Drive API"</strong> → Enable</div>
-          </div>
-          <div class="gd-step">
-            <div class="gd-step-num">3</div>
-            <div>ไปที่ <strong>APIs &amp; Services → OAuth consent screen</strong> → เลือก <strong>External</strong> → กรอกชื่อ App → Save</div>
-          </div>
-          <div class="gd-step">
-            <div class="gd-step-num">4</div>
-            <div>ไปที่ <strong>Credentials → Create Credentials → OAuth Client ID</strong> → เลือก <strong>Web application</strong></div>
-          </div>
-          <div class="gd-step">
-            <div class="gd-step-num">5</div>
-            <div>ใน <strong>Authorized JavaScript origins</strong> เพิ่ม URL ที่เปิดไฟล์นี้ เช่น <code style="background:var(--g2);padding:1px 5px;border-radius:3px">file://</code> หรือ <code style="background:var(--g2);padding:1px 5px;border-radius:3px">http://localhost</code></div>
-          </div>
-          <div class="gd-step">
-            <div class="gd-step-num">6</div>
-            <div>Copy <strong>Client ID</strong> ที่ได้ → วางในช่องด้านล่าง</div>
-          </div>
+      <div style="background:#f0fdf4;border-radius:8px;padding:14px;border:1px solid #86efac;margin-bottom:14px">
+        <div style="font-weight:700;color:#15803d;font-size:.9rem;margin-bottom:6px">✅ พร้อมใช้งาน — ไม่ต้อง Login</div>
+        <div style="font-size:.82rem;color:#166534;line-height:1.6">
+          ระบบ Backup ใช้ Apps Script เป็น proxy<br>
+          ไฟล์จะบันทึกใน Google Drive โฟลเดอร์ OR โดยตรง
         </div>
       </div>
-
-      <!-- Client ID Input -->
-      <div style="margin-bottom:14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-          <label style="font-weight:600">Google OAuth Client ID</label>
-          <button onclick="document.getElementById('gdSetupGuide').style.display=document.getElementById('gdSetupGuide').style.display==='none'?'block':'none'" 
-            style="background:none;border:none;cursor:pointer;font-size:.76rem;color:var(--primary);text-decoration:underline">
-            📖 วิธีสร้าง Client ID
-          </button>
-        </div>
-        <input type="text" id="gdClientId" placeholder="xxxxxxxxxx.apps.googleusercontent.com" 
-          style="font-family:monospace;font-size:.78rem" oninput="gdCheckClientId()">
-        <div id="gdClientIdStatus" style="font-size:.74rem;margin-top:4px;color:var(--g4)">วาง Client ID จาก Google Cloud Console</div>
+      <div style="background:var(--g1);border-radius:8px;padding:12px;font-size:.82rem;color:var(--g6)">
+        <div style="margin-bottom:6px">📁 <strong>โฟลเดอร์:</strong> StockCard_OR_BEH</div>
+        <div>📄 <strong>ไฟล์:</strong> stockcard_backup.json</div>
       </div>
-
-      <!-- Auto-save settings -->
-      <div style="background:var(--g1);border-radius:8px;padding:12px;margin-bottom:14px">
-        <div style="font-weight:600;margin-bottom:8px;font-size:.85rem">⚙️ ตั้งค่าการ Sync</div>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;font-weight:normal">
-          <input type="checkbox" id="gdAutoSave" style="width:16px;height:16px;cursor:pointer">
-          <span style="font-size:.84rem">Auto-save ทุกครั้งที่บันทึกรายการ</span>
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:normal">
-          <input type="checkbox" id="gdAutoLoad" style="width:16px;height:16px;cursor:pointer">
-          <span style="font-size:.84rem">Auto-load เมื่อเปิดแอป (ดึงข้อมูลล่าสุดจาก Drive)</span>
-        </label>
-      </div>
-
-      <!-- Status info if already connected -->
-      <div id="gdConnectedInfo" style="display:none;background:#f0fdf4;border-radius:8px;padding:12px;margin-bottom:14px;border:1px solid #86efac">
-        <div style="font-weight:600;color:#15803d;margin-bottom:4px">✅ เชื่อมต่อแล้ว</div>
-        <div style="font-size:.8rem;color:#166534" id="gdConnectedEmail"></div>
-        <div style="font-size:.78rem;color:#166534;margin-top:2px" id="gdConnectedFile"></div>
-        <button onclick="gdDisconnect()" style="margin-top:8px;background:none;border:1px solid #b91c1c;color:#b91c1c;border-radius:5px;padding:3px 10px;cursor:pointer;font-size:.75rem">
-          ยกเลิกการเชื่อมต่อ
-        </button>
-      </div>
-
+      <!-- hidden inputs เพื่อไม่ให้ JS error -->
+      <input type="hidden" id="gdClientId">
+      <input type="hidden" id="gdAutoSave">
+      <input type="hidden" id="gdAutoLoad">
+      <div id="gdClientIdStatus" style="display:none"></div>
+      <div id="gdConnectedInfo" style="display:none"></div>
+      <div id="gdConnectedEmail" style="display:none"></div>
+      <div id="gdConnectedFile"  style="display:none"></div>
+      <button id="gdConnectBtn"  style="display:none"></button>
     </div>
     <div class="mf">
       <button class="btn bs" onclick="closeModal('modalGDrive')">ปิด</button>
-      <button class="btn bsv" id="gdConnectBtn" onclick="gdConnect()" disabled>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-2px"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-        เชื่อมต่อ Google Drive
+      <button class="btn bsv" onclick="requireMasterPin('🔐 ยืนยันเพื่อ Backup ข้อมูล', () => { gdSaveNow(); closeModal('modalGDrive'); })">
+        💾 Backup เดี๋ยวนี้
       </button>
     </div>
   </div>
@@ -7558,99 +7508,55 @@ function esc(s) {
 
 
 /* ══════════════════════════════════════════
-   GOOGLE DRIVE SYNC
+   GOOGLE DRIVE SYNC  — via Apps Script proxy
+   ไม่ต้องใช้ OAuth เลย, ไม่มี 401/403 loop
 ══════════════════════════════════════════ */
 
 const GD = {
-  CLIENT_ID:   '142005075916-rdf9a8k3kef8rif6d257p2abokh0uga0.apps.googleusercontent.com',
-  SCOPES:      'https://www.googleapis.com/auth/drive.appdata',
-  FOLDER_NAME: 'StockCard_OR_BEH',
+  SCRIPT_URL:  'https://script.google.com/macros/s/AKfycbzxyZ0k8_HF1RDRXkUmnxLpazVBZr6X45ac62Ke74891z6pjKYgNTkoH7NRyQFOYe4b/exec',
+  FOLDER_ID:   '1I3aRwLH5_e3rh4tevUCVCssFMPjOpW_u',
   FILE_NAME:   'stockcard_backup.json',
-  tokenClient: null,
-  accessToken: null,
-  folderId:    null,
-  fileId:      null,
-  userEmail:   '',
-  autoSave:    false,
-  autoLoad:    false,
   syncing:     false,
+  // ตัวแปรด้านล่างเก็บไว้เพื่อไม่ให้ error จากโค้ดเก่าที่อาจเรียก
+  accessToken: null, tokenClient: null, folderId: null, fileId: null,
+  userEmail: '', autoSave: false, autoLoad: false,
 };
 
 /* ── Init ─────────────────────────────────── */
 function gdInit() {
-  const saved_cfg = (() => { try { return JSON.parse(localStorage.getItem('orGD') || '{}'); } catch{ return {}; } })();
-  GD.CLIENT_ID = '142005075916-rdf9a8k3kef8rif6d257p2abokh0uga0.apps.googleusercontent.com';
-  GD.userEmail = saved_cfg.email || '';
-  GD.accessToken = null;
-  GD.fileId = null;
-  GD.folderId = null;
-  // autoLoad/autoSave: disabled ถาวร — ป้องกัน silent-auth loop
-  GD.autoSave = false;
-  GD.autoLoad = false;
-
-  // ล้าง localStorage เก่าที่อาจมี autoLoad:true / token เก่า
+  // ล้าง localStorage เก่าทั้งหมด (token/fileId เก่าไม่ใช้แล้ว)
   try {
-    const cfg = JSON.parse(localStorage.getItem('orGD') || '{}');
-    cfg.autoLoad = false;
-    cfg.autoSave = false;
-    delete cfg.token;
-    delete cfg.fileId;
-    delete cfg.folderId;
-    cfg.scopeVer = 2;
-    localStorage.setItem('orGD', JSON.stringify(cfg));
+    localStorage.removeItem('orGD');
   } catch(e) {}
-
-  gdUpdateUI(false);
+  const ts = localStorage.getItem('orGDLastSync');
+  gdSetLastSync(ts || null);
+  gdUpdateUI(true); // Apps Script ไม่ต้อง auth — connected เสมอ
 }
 
-function gdSilentAuth() {
-  // disabled — ป้องกัน loop จาก scope เก่า
-}
+function gdSilentAuth()    { /* ไม่ใช้แล้ว */ }
+function _gdSilentAuthNow(){ /* ไม่ใช้แล้ว */ }
+function gdSaveConfig()    { /* ไม่ใช้แล้ว */ }
 
-function _gdSilentAuthNow() {
-  // disabled — ใช้ gdConnect() แทน
-}
-
-function gdSaveConfig() {
-  // ไม่บันทึก token ลง localStorage เพราะ Google OAuth2 token มีอายุ 1 ชั่วโมง
-  // หลัง reload ให้ user re-auth ใหม่ผ่าน GIS (ซึ่ง silent ได้ถ้า session ยังอยู่)
-  localStorage.setItem('orGD', JSON.stringify({
-    clientId: GD.CLIENT_ID,
-    autoSave: GD.autoSave,
-    autoLoad: GD.autoLoad,
-    email: GD.userEmail,
-    scopeVer: 2,   // v2 = drive.appdata only (เปลี่ยน scope ให้เพิ่มตัวเลขนี้)
-    // token/fileId/folderId: ไม่เซฟ
-  }));
-}
-
-/* ── UI Updates ───────────────────────────── */
+/* ── UI ───────────────────────────────────── */
 function gdUpdateUI(connected) {
-  const btn    = document.getElementById('gdStatusBtn');
-  const dot    = document.getElementById('gdDot');
-  const txt    = document.getElementById('gdStatusTxt');
-  const saveB  = document.getElementById('gdSaveBtn');
-  const loadB  = document.getElementById('gdLoadBtn');
-  const isConn = connected === true || (connected === undefined && !!GD.accessToken);
+  const btn   = document.getElementById('gdStatusBtn');
+  const dot   = document.getElementById('gdDot');
+  const txt   = document.getElementById('gdStatusTxt');
+  const saveB = document.getElementById('gdSaveBtn');
+  const loadB = document.getElementById('gdLoadBtn');
 
   if (GD.syncing) {
-    btn.className = 'gd-status syncing';
-    dot.className = 'gd-sync-dot pulse';
-    txt.textContent = 'กำลัง Sync...';
+    if (btn) btn.className = 'gd-status syncing';
+    if (dot) dot.className = 'gd-sync-dot pulse';
+    if (txt) txt.textContent = 'กำลัง Sync...';
     if (saveB) saveB.disabled = true;
     if (loadB) loadB.disabled = true;
-  } else if (isConn) {
-    btn.className = 'gd-status connected';
-    dot.className = 'gd-sync-dot ok';
-    txt.textContent = GD.userEmail ? GD.userEmail.split('@')[0] : 'เชื่อมต่อแล้ว';
+  } else {
+    if (btn) btn.className = 'gd-status connected';
+    if (dot) dot.className = 'gd-sync-dot ok';
+    if (txt) txt.textContent = 'Drive พร้อม';
     if (saveB) saveB.disabled = false;
     if (loadB) loadB.disabled = false;
-  } else {
-    btn.className = 'gd-status disconnected';
-    dot.className = 'gd-sync-dot err';
-    txt.textContent = GD.CLIENT_ID ? 'คลิกเพื่อเชื่อมต่อ' : 'ยังไม่ตั้งค่า';
-    if (saveB) saveB.disabled = true;
-    if (loadB) loadB.disabled = true;
   }
 }
 
@@ -7659,232 +7565,20 @@ function gdSetLastSync(ts) {
   if (!el) return;
   if (!ts) { el.textContent = ''; return; }
   const d = new Date(ts);
-  el.textContent = 'Sync ล่าสุด: ' + d.toLocaleDateString('th-TH', {day:'numeric',month:'short'}) + ' ' + d.toLocaleTimeString('th-TH', {hour:'2-digit',minute:'2-digit'});
+  el.textContent = 'Sync ล่าสุด: '
+    + d.toLocaleDateString('th-TH', { day:'numeric', month:'short' })
+    + ' ' + d.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
 }
 
-/* ── Setup Modal ──────────────────────────── */
-function openGDriveSetup() {
-  const cfg = (() => { try { return JSON.parse(localStorage.getItem('orGD') || '{}'); } catch{ return {}; } })();
-  const cidEl    = document.getElementById('gdClientId');
-  const autoSave = document.getElementById('gdAutoSave');
-  const autoLoad = document.getElementById('gdAutoLoad');
-  // Always show the hardcoded Client ID
-  if (cidEl)    cidEl.value = GD.CLIENT_ID || cfg.clientId || '';
-  if (autoSave) autoSave.checked = cfg.autoSave || false;
-  if (autoLoad) autoLoad.checked = cfg.autoLoad || false;
+/* ── ฟังก์ชัน stub สำหรับปุ่ม Connect/Disconnect (ไม่ใช้แล้ว) ── */
+function gdToggleConnect()  { showT('✅ ระบบ Backup พร้อมใช้งานแล้ว ไม่ต้อง Login', 'ok'); }
+function openGDriveSetup()  { showT('✅ ระบบ Backup พร้อมใช้งานแล้ว ไม่ต้อง Login', 'ok'); }
+function gdConnect()        { gdToggleConnect(); }
+function gdCheckClientId()  {}
+function gdDisconnect()     {}
 
-  const connInfo = document.getElementById('gdConnectedInfo');
-  const emailEl  = document.getElementById('gdConnectedEmail');
-  const fileEl   = document.getElementById('gdConnectedFile');
-  if (connInfo) {
-    connInfo.style.display = GD.accessToken ? '' : 'none';
-    if (emailEl) emailEl.textContent = '👤 ' + (cfg.email || GD.userEmail || '');
-    if (fileEl)  fileEl.textContent  = '📄 ' + GD.FOLDER_NAME + '/' + GD.FILE_NAME;
-  }
-  gdCheckClientId();
-  document.getElementById('modalGDrive')?.classList.add('open');
-}
-
-function gdCheckClientId() {
-  const val = (document.getElementById('gdClientId')?.value || '').trim();
-  const btn = document.getElementById('gdConnectBtn');
-  const st  = document.getElementById('gdClientIdStatus');
-  const valid = val.includes('.apps.googleusercontent.com') || val.length > 20;
-  if (btn) btn.disabled = !valid;
-  if (st) {
-    if (!val) { st.textContent = 'วาง Client ID จาก Google Cloud Console'; st.style.color='var(--g4)'; }
-    else if (valid) { st.textContent = '✓ รูปแบบถูกต้อง'; st.style.color='#15803d'; }
-    else { st.textContent = 'รูปแบบไม่ถูกต้อง (ควรลงท้ายด้วย .apps.googleusercontent.com)'; st.style.color='#b91c1c'; }
-  }
-}
-
-/* ── Auth ─────────────────────────────────── */
-function gdToggleConnect() {
-  // Always open setup modal so user can confirm and connect
-  openGDriveSetup();
-}
-
-function gdConnect() {
-  const clientId = (document.getElementById('gdClientId')?.value || '').trim();
-  if (!clientId) { showT('กรุณากรอก Client ID ก่อน', 'e'); return; }
-
-  GD.CLIENT_ID = clientId;
-  GD.autoSave  = document.getElementById('gdAutoSave')?.checked || false;
-  GD.autoLoad  = document.getElementById('gdAutoLoad')?.checked || false;
-
-  if (!window.google?.accounts?.oauth2) {
-    showT('Google API ยังโหลดไม่เสร็จ กรุณารอสักครู่', 'e');
-    // Retry after 2 seconds
-    setTimeout(gdConnect, 2000);
-    return;
-  }
-
-  GD.tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: GD.CLIENT_ID,
-    scope: GD.SCOPES,
-    callback: async (response) => {
-      if (response.error) {
-        showT('เชื่อมต่อไม่สำเร็จ: ' + response.error, 'e');
-        gdUpdateUI(false);
-        return;
-      }
-      GD.accessToken = response.access_token;
-      GD.fileId = null;
-      GD.folderId = null;
-
-      // ตรวจ scope — ต้องมี drive.appdata ไม่งั้น Backup จะ 403
-      try {
-        const ti = await fetch(
-          'https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=' + GD.accessToken
-        );
-        const info = await ti.json();
-        if (!info.scope || !info.scope.includes('drive.appdata')) {
-          GD.accessToken = null;
-          gdUpdateUI(false);
-          showT('❌ Permission ไม่ถูกต้อง — กรุณากด Disconnect แล้ว Connect ใหม่', 'e');
-          return;
-        }
-        GD.userEmail = info.email || info.sub || '';
-      } catch(e) {}
-
-      gdSaveConfig();
-      gdUpdateUI(true);
-      closeModal('modalGDrive');
-      showT('✅ เชื่อมต่อ Google Drive แล้ว (' + (GD.userEmail||'') + ')', 'ok');
-
-      // Update connected info in modal
-      const connInfo = document.getElementById('gdConnectedInfo');
-      if (connInfo) {
-        connInfo.style.display = '';
-        const emailEl = document.getElementById('gdConnectedEmail');
-        if (emailEl) emailEl.textContent = '👤 ' + GD.userEmail;
-      }
-
-      // autoLoad disabled — user กด Restore เองได้
-    }
-  });
-  GD.tokenClient.requestAccessToken({ prompt: 'select_account' });
-}
-
-async function gdValidateToken() {
-  if (!GD.accessToken) return false;
-  try {
-    const r = await fetch('https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=' + GD.accessToken);
-    const info = await r.json();
-    if (info.error) {
-      // Token หมดอายุ → ล้างออกจาก memory + localStorage
-      GD.accessToken = null;
-      GD.fileId = null;
-      GD.folderId = null;
-      try {
-        const cfg = JSON.parse(localStorage.getItem('orGD') || '{}');
-        delete cfg.token;
-        delete cfg.fileId;
-        delete cfg.folderId;
-        localStorage.setItem('orGD', JSON.stringify(cfg));
-      } catch(e) {}
-      return false;
-    }
-    GD.userEmail = info.email || GD.userEmail || '';
-    return true;
-  } catch { return false; }
-}
-
-function gdDisconnect() {
-  if (GD.accessToken && window.google?.accounts?.oauth2) {
-    google.accounts.oauth2.revoke(GD.accessToken);
-  }
-  GD.accessToken = null;
-  GD.folderId = null;
-  GD.fileId = null;
-  GD.userEmail = '';
-  gdSaveConfig();
-  gdUpdateUI(false);
-  gdSetLastSync(null);
-  closeModal('modalGDrive');
-  showT('ยกเลิกการเชื่อมต่อแล้ว', 'ok');
-}
-
-/* ── Drive API Helpers ─────────────────────── */
-/* ── Central fetch helper — handles 401/403 ── */
-async function gdFetch(url, options = {}) {
-  const resp = await fetch(url, {
-    ...options,
-    headers: {
-      'Authorization': 'Bearer ' + GD.accessToken,
-      ...(options.headers || {})
-    }
-  });
-
-  if (resp.status === 401) {
-    // Token หมดอายุ → ล้างทุกอย่างแล้วแจ้ง re-auth
-    GD.accessToken = null;
-    GD.fileId      = null;
-    GD.folderId    = null;
-    // ล้าง token ใน localStorage ด้วย (ไม่ให้ reload แล้วใช้ token เก่า)
-    try {
-      const cfg = JSON.parse(localStorage.getItem('orGD') || '{}');
-      delete cfg.token;
-      delete cfg.fileId;
-      delete cfg.folderId;
-      localStorage.setItem('orGD', JSON.stringify(cfg));
-    } catch(e) {}
-    gdUpdateUI(false);
-    throw new Error('401: Token หมดอายุ — กรุณากดเชื่อมต่อ Google Drive ใหม่');
-  }
-
-  if (resp.status === 403) {
-    // ไม่มีสิทธิ์ไฟล์เก่า (token ใหม่) → ล้าง fileId/folderId cache
-    // 403 ใน appdata = token scope ไม่ถูกต้องหรือ revoke แล้ว → ให้ re-auth
-    GD.accessToken = null;
-    GD.fileId = null;
-    try {
-      const cfg = JSON.parse(localStorage.getItem('orGD') || '{}');
-      delete cfg.token; delete cfg.fileId;
-      localStorage.setItem('orGD', JSON.stringify(cfg));
-    } catch(e) {}
-    gdUpdateUI(false);
-    throw new Error('403: หมดสิทธิ์เข้าถึง Drive — กรุณากดเชื่อมต่อใหม่');
-  }
-
-  return resp;
-}
-
-/* ── legacy alias (ยังมีที่เรียกบางจุด) ── */
-async function gdRequest(url, options = {}) {
-  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
-  return gdFetch(url, { ...options, headers });
-}
-
-// ══════════════════════════════════════════════════════════
-// ใช้ drive.appdata space — ไม่ต้องสร้าง folder, search ได้เสมอ, ไม่มี 403
-// appdata เป็น hidden space เฉพาะ app นี้เท่านั้น user ไม่เห็นใน Drive
-// ══════════════════════════════════════════════════════════
-
-// ไม่ใช้แล้ว แต่เก็บไว้เพื่อไม่ให้ error ถ้ามีที่เรียก
-async function gdGetOrCreateFolder() { return 'appDataFolder'; }
-
-async function gdGetFileId() {
-  if (GD.fileId) return GD.fileId;
-
-  // ค้นหาไฟล์ใน appdata space
-  const q = encodeURIComponent(`name='${GD.FILE_NAME}' and trashed=false`);
-  const r = await gdFetch(
-    `https://www.googleapis.com/drive/v3/files?q=${q}&spaces=appDataFolder&fields=files(id,name,modifiedTime)`
-  );
-  // gdFetch throw แล้วสำหรับ 401/403 — ไม่ต้องจัดการที่นี่
-  if (!r.ok) return null;
-
-  const data = await r.json();
-  if (data.files && data.files.length > 0) {
-    GD.fileId = data.files[0].id;
-  }
-  return GD.fileId || null;
-}
-
-/* ── Save to Drive (appdata space) ─────────── */
+/* ── Save (Backup) ────────────────────────── */
 async function gdSaveNow(silent = false) {
-  if (!GD.accessToken) { showT('กรุณาเชื่อมต่อ Google Drive ก่อน', 'e'); return; }
   if (GD.syncing) return;
   GD.syncing = true;
   gdUpdateUI();
@@ -7892,65 +7586,39 @@ async function gdSaveNow(silent = false) {
 
   try {
     const payload = JSON.stringify({
-      version: 2,
+      version: 3,
       savedAt: new Date().toISOString(),
-      device: navigator.userAgent.substring(0, 50),
-      orSE:  JSON.parse(localStorage.getItem('orSE')   || '[]'),
+      orSE:   JSON.parse(localStorage.getItem('orSE')   || '[]'),
       orDocs: JSON.parse(localStorage.getItem('orDocs') || '[]'),
-    }, null, 2);
+    });
 
-    const blob = new Blob([payload], { type: 'application/json' });
-    let existingId = await gdGetFileId();
+    // แปลงเป็น base64 แล้วส่งผ่าน Apps Script
+    const b64 = btoa(unescape(encodeURIComponent(payload)));
 
-    if (existingId) {
-      // อัปเดตไฟล์เดิมใน appdata
-      const r = await gdFetch(
-        `https://www.googleapis.com/upload/drive/v3/files/${existingId}?uploadType=multipart`,
-        { method: 'PATCH', body: (() => {
-            const fd = new FormData();
-            fd.append('metadata', new Blob([JSON.stringify({ name: GD.FILE_NAME })], { type: 'application/json' }));
-            fd.append('file', blob);
-            return fd;
-          })()
-        }
-      );
-      if (r.status === 404) {
-        // ไฟล์ถูกลบไปแล้ว → สร้างใหม่
-        GD.fileId = null;
-        existingId = null;
-      } else if (!r.ok) {
-        throw new Error('อัปเดตไฟล์ไม่สำเร็จ: ' + r.status);
-      }
-      // 401/403 gdFetch จัดการแล้ว (throw)
-    }
+    const resp = await fetch(GD.SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action:   'backup',
+        data:     b64,
+        mimeType: 'application/json',
+        filename: GD.FILE_NAME,
+        folderId: GD.FOLDER_ID,
+      }),
+    });
 
-    if (!existingId) {
-      // สร้างไฟล์ใหม่ใน appdata space
-      const r = await gdFetch(
-        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
-        { method: 'POST', body: (() => {
-            const fd = new FormData();
-            fd.append('metadata', new Blob([JSON.stringify({
-              name: GD.FILE_NAME,
-              parents: ['appDataFolder'],   // ← key: appdata ไม่ต้องหา folder id
-            })], { type: 'application/json' }));
-            fd.append('file', blob);
-            return fd;
-          })()
-        }
-      );
-      if (!r.ok) {
-        const err = await r.json().catch(() => ({}));
-        throw new Error('สร้างไฟล์ไม่สำเร็จ (' + r.status + '): ' + (err?.error?.message || ''));
-      }
-      const data = await r.json();
-      GD.fileId = data.id;
+    const result = await resp.json();
+    if (result.error) throw new Error(result.error);
+
+    // เซฟ fileId ใหม่ถ้ามี (สำหรับ overwrite รอบหน้า)
+    if (result.id) {
+      GD.fileId = result.id;
+      try { localStorage.setItem('orGDFileId', result.id); } catch(e) {}
     }
 
     const ts = new Date().toISOString();
     localStorage.setItem('orGDLastSync', ts);
     gdSetLastSync(ts);
-    gdSaveConfig();
     if (!silent) showT('✅ Backup ไป Google Drive แล้ว', 'ok');
   } catch(e) {
     console.error('GDrive save error:', e);
@@ -7961,36 +7629,29 @@ async function gdSaveNow(silent = false) {
   }
 }
 
-/* ── Load from Drive ────────────────────────── */
+/* ── Load (Restore) ────────────────────────── */
 async function gdLoadLatest(silent = false) {
-  if (!GD.accessToken) { showT('กรุณาเชื่อมต่อ Google Drive ก่อน', 'e'); return; }
   if (GD.syncing) return;
   GD.syncing = true;
   gdUpdateUI();
   if (!silent) showT('กำลังโหลดข้อมูลจาก Google Drive...', '');
 
   try {
-    const fileId = await gdGetFileId();
-    if (!fileId) {
-      GD.syncing = false;
-      gdUpdateUI();
-      if (!silent) showT('ไม่พบไฟล์ Backup ใน Drive (ลอง Backup ก่อน)', 'e');
-      return;
-    }
+    // ดึงไฟล์ล่าสุดจาก folder ผ่าน Apps Script
+    const resp = await fetch(GD.SCRIPT_URL + '?action=restore&folderId=' + GD.FOLDER_ID + '&filename=' + encodeURIComponent(GD.FILE_NAME));
+    const result = await resp.json();
+    if (result.error) throw new Error(result.error);
+    if (!result.data) throw new Error('ไม่พบไฟล์ Backup ใน Drive');
 
-    const r = await gdFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
-    const text = await r.text();
-    const data = JSON.parse(text);
+    // decode base64 → JSON
+    const jsonStr = decodeURIComponent(escape(atob(result.data)));
+    const data = JSON.parse(jsonStr);
+    if (!data.orSE && !data.orDocs) throw new Error('ไฟล์ Backup ไม่ถูกต้อง');
 
-    if (!data.orSE && !data.orDocs) throw new Error('ไฟล์ไม่ถูกต้อง');
-
-    // Confirm restore (don't overwrite without asking unless silent startup load)
     if (!silent) {
-      const savedAt = data.savedAt ? new Date(data.savedAt).toLocaleString('th-TH') : 'ไม่ทราบ';
-      const recCount = (data.orSE||[]).length;
-      const tplCount = (data.orDocs||[]).length;
-      const msg = 'Restore ข้อมูลจาก Drive?\n\n📅 บันทึกเมื่อ: ' + savedAt + '\n📋 ประวัติ: ' + recCount + ' รายการ\n👨‍⚕️ Template: ' + tplCount + ' แผน\n\n⚠️ จะทับข้อมูลปัจจุบันทั้งหมด';
-      // Use custom confirm modal
+      const savedAt  = data.savedAt ? new Date(data.savedAt).toLocaleString('th-TH') : 'ไม่ทราบ';
+      const recCount = (data.orSE   || []).length;
+      const tplCount = (data.orDocs || []).length;
       pendGDRestore = data;
       document.getElementById('gdRestoreMsg').innerHTML =
         '<div style="margin-bottom:8px">📅 บันทึกเมื่อ: <strong>' + savedAt + '</strong></div>' +
@@ -8002,15 +7663,10 @@ async function gdLoadLatest(silent = false) {
       gdUpdateUI();
       return;
     }
-
-    // Silent auto-load: only restore if drive has more recent data
-    const localSaved = (() => { try { return JSON.parse(localStorage.getItem('orSE')||'[]'); } catch{return[];} })();
-    if (localSaved.length > 0 && !silent) return; // Don't overwrite if local has data
-
     gdApplyRestore(data, true);
   } catch(e) {
     console.error('GDrive load error:', e);
-    if (!silent) showT('❌ โหลดไม่สำเร็จ: ' + e.message, 'e');
+    if (!silent) showT('❌ Restore ไม่สำเร็จ: ' + e.message, 'e');
   } finally {
     GD.syncing = false;
     gdUpdateUI();
@@ -8031,10 +7687,7 @@ function gdApplyRestore(data, silent) {
   const ts = new Date().toISOString();
   localStorage.setItem('orGDLastSync', ts);
   gdSetLastSync(ts);
-  rHist();
-  renderDocGrid();
-  updateDocSelects();
-  updSum();
+  rHist(); renderDocGrid(); updateDocSelects(); updSum();
   if (!silent) showT('✅ Restore ข้อมูลจาก Google Drive แล้ว', 'ok');
 }
 

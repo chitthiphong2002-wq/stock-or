@@ -5077,9 +5077,21 @@ async function analyze() {
   rc.innerHTML = '<div style="text-align:center;padding:28px;color:var(--g4)">AI กำลังอ่านภาพและนับขีด<span class="dot3"></span></div>';
   if (srEl) srEl.style.display = 'none';
 
-  // ── ใช้ Apps Script เป็น Proxy ส่งไป Gemini ──
-  const PROXY_URL = 'https://script.google.com/macros/s/AKfycbzxyZ0k8_HF1RDRXkUmnxLpazVBZr6X45ac62Ke74891z6pjKYgNTkoH7NRyQFOYe4b/exec';
-  const GEMINI_KEY = localStorage.getItem('orApiKey') || 'AIzaSyD6U8vBVjZpRoUzRUlE43FI_7gUw0a7Oko';
+  // ── เรียก Gemini API โดยตรง ──
+  const GEMINI_KEY = localStorage.getItem('orApiKey') || 'AIzaSyDscBfF8MjKtMgImH0Awzg4iIcJR4nLiTk';
+  if (!GEMINI_KEY) {
+    rc.innerHTML = `<div style="text-align:center;padding:20px 24px">
+      <div style="font-size:2rem;margin-bottom:8px">🔑</div>
+      <div style="font-weight:700;color:var(--rd);font-size:.95rem;margin-bottom:8px">ยังไม่ได้ตั้งค่า API Key</div>
+      <div style="font-size:.83rem;color:var(--g5);margin-bottom:14px">กรุณาไปที่ <b>ตั้งค่า → Gemini API Key</b> แล้วใส่ key ของคุณก่อน<br>รับ key ฟรีได้ที่ <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--primary)">aistudio.google.com</a></div>
+    </div>`;
+    rt2.textContent = 'วิเคราะห์ไม่สำเร็จ';
+    rsd.className = 'sd er';
+    btn.disabled = false;
+    btn.innerHTML = '<span class="ico"><svg width="14" height="14"><use href="#ic-analyze"/></svg></span> วิเคราะห์ด้วย AI';
+    return;
+  }
+  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`;
 
   const PROMPT = `คุณคือผู้ช่วยระบบ Stock Card ห้องผ่าตัดตา (OR) — Bangkok Eye Hospital
 
@@ -5111,10 +5123,10 @@ async function analyze() {
         generationConfig: { temperature: 0.1, maxOutputTokens: 2000 }
       };
 
-      const res = await fetch(PROXY_URL, {
+      const res = await fetch(GEMINI_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'gemini', body })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
       });
 
       const data = await res.json();

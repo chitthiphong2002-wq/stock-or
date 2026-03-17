@@ -421,6 +421,147 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
   .pin-left{display:none;}
   .pin-right{padding:32px 28px;}
 }
+
+/* ══════════════════════════════════════════
+   RESPONSIVE — MOBILE & TABLET
+══════════════════════════════════════════ */
+
+/* ── Tablet (max 900px) ── */
+@media(max-width:900px){
+  /* Header */
+  header { padding:0 12px; min-height:48px; }
+  header .logo { font-size:18px; padding-right:8px; margin-right:8px; }
+  header h1 { font-size:.88rem; }
+  header p  { font-size:.65rem; }
+
+  /* gd-bar wrap to 2 lines on tablet */
+  .gd-bar { gap:6px; padding:5px 12px; }
+
+  /* Tabs: allow horizontal scroll */
+  .tabs { overflow-x:auto; -webkit-overflow-scrolling:touch; flex-wrap:nowrap; border-radius:0; }
+  .tabs::-webkit-scrollbar { height:0; }
+  .tab { padding:10px 14px; font-size:.8rem; white-space:nowrap; flex-shrink:0; }
+
+  /* entry layout stacks */
+  .entry-layout { grid-template-columns:1fr !important; }
+
+  /* history table scrollable */
+  .ow { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+
+  /* modal full-width */
+  .modal { width:min(520px, 96vw) !important; }
+
+  /* calendar layout stacks */
+  #thistory > .card > div[style*="grid-template-columns:auto 1fr"] { grid-template-columns:1fr !important; }
+}
+
+/* ── Mobile (max 640px) ── */
+@media(max-width:640px){
+  /* Layout padding */
+  .con { padding:8px 8px; }
+
+  /* Header compact */
+  header { padding:0 10px; min-height:44px; }
+  header .logo { display:none; }
+  header h1 { font-size:.83rem; }
+  header p  { display:none; }
+
+  /* gd-bar on mobile: icon-only for small items */
+  .gd-bar { padding:4px 10px; gap:5px; flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .gd-bar::-webkit-scrollbar { height:0; }
+  #gdLastSync { display:none; }
+
+  /* Tabs: icon only option on very small */
+  .tabs { border-radius:0; }
+  .tab { padding:9px 11px; font-size:.76rem; }
+  .tab .ico { display:inline-flex; }
+
+  /* Cards */
+  .card { border-radius:6px; }
+  .cb   { padding:10px; }
+  .ch   { padding:7px 10px; }
+  .ch h2{ font-size:.82rem; }
+
+  /* Forms */
+  .fr  { grid-template-columns:1fr !important; }
+  .fr2 { grid-template-columns:1fr !important; }
+
+  /* Type toggle buttons */
+  .tt .tb { padding:8px 6px; font-size:.82rem; }
+
+  /* Buttons */
+  .btn { padding:7px 12px; font-size:.8rem; }
+
+  /* Tables: make scrollable with better min-width */
+  .ow,
+  div[style*="overflow-x:auto"] { overflow-x:auto !important; -webkit-overflow-scrolling:touch; }
+  .ht { font-size:.76rem; }
+  .ht th, .ht td { padding:6px 7px; }
+
+  /* template grid */
+  .tpl-grid { grid-template-columns:repeat(auto-fill,minmax(140px,1fr)) !important; }
+
+  /* category grid */
+  .cat-body { grid-template-columns:repeat(auto-fill,minmax(130px,1fr)) !important; }
+
+  /* Stock entry list */
+  .se-item { padding:7px 8px; }
+
+  /* History + record layout: already grid-template-columns:1fr from 900px */
+
+  /* Inline grids in tab content */
+  div[style*="grid-template-columns:1fr 1fr"] { grid-template-columns:1fr !important; }
+  div[style*="grid-template-columns:repeat(3,1fr)"] { grid-template-columns:1fr !important; }
+  div[style*="grid-template-columns:140px 1fr"]     { grid-template-columns:1fr !important; }
+  div[style*="grid-template-columns:100px 1fr"]     { grid-template-columns:1fr !important; }
+  div[style*="grid-template-columns:auto 1fr"]      { grid-template-columns:1fr !important; }
+
+  /* Modal */
+  .modal { width:98vw !important; max-height:94vh !important; border-radius:8px !important; }
+  .mh { padding:10px 12px; }
+  .mb2{ padding:10px 12px; }
+  .mf { padding:8px 12px; gap:6px; }
+
+  /* AI tab image upload */
+  .uz { padding:16px 10px; }
+
+  /* Calendar responsive */
+  #thistory > .card > div[style*="grid-template-columns:auto 1fr"] { grid-template-columns:1fr !important; }
+  .card[style*="min-width:280px"] { min-width:unset !important; max-width:100% !important; }
+
+  /* Stats bar */
+  .sb { display:grid !important; grid-template-columns:repeat(2,1fr); gap:6px; margin-bottom:8px; }
+  .si { padding:8px 10px; }
+  .si .nm { font-size:1.1rem; }
+  .si .lb { font-size:.65rem; }
+
+  /* Toast bottom on mobile */
+  #toast { bottom:16px !important; top:auto !important; font-size:.8rem; }
+
+  /* PIN screen */
+  .pin-left { display:none; }
+  .pin-right { padding:28px 20px; min-width:unset; width:100%; }
+}
+
+/* ── Very small (max 380px) ── */
+@media(max-width:380px){
+  .tab { padding:8px 9px; font-size:.71rem; }
+  .con { padding:6px; }
+  .cb  { padding:8px; }
+  .btn { padding:6px 10px; font-size:.76rem; }
+}
+
+/* ── Named responsive grid helpers ── */
+@media(max-width:900px){
+  .resp-2col      { grid-template-columns:1fr !important; }
+  .resp-cal-layout{ grid-template-columns:1fr !important; }
+  .fr2            { grid-template-columns:1fr 1fr; } /* keep fr2 as 2 col on tablet */
+}
+@media(max-width:640px){
+  .resp-2col      { grid-template-columns:1fr !important; }
+  .resp-cal-layout{ grid-template-columns:1fr !important; }
+  .fr2            { grid-template-columns:1fr !important; }
+}
 </style>
   <!-- Firebase SDK -->
   <script type="module">
@@ -907,7 +1048,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
 
   <!-- ===== TAB: TEMPLATE ===== -->
   <div id="ttpl" class="tc">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div class="resp-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
       <!-- Left: Doctor list with collapsible categories -->
       <div>
         <div class="card">
@@ -993,7 +1134,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
 
   <!-- ===== TAB: HISTORY ===== -->
   <div id="thistory" class="tc">
-    <div style="display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start">
+    <div class="resp-cal-layout" style="display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start">
 
       <!-- LEFT: Calendar -->
       <div class="card" style="min-width:280px;max-width:320px">
@@ -7611,7 +7752,20 @@ async function gdValidateToken() {
   try {
     const r = await fetch('https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=' + GD.accessToken);
     const info = await r.json();
-    if (info.error) return false;
+    if (info.error) {
+      // Token หมดอายุ → ล้างออกจาก memory + localStorage
+      GD.accessToken = null;
+      GD.fileId = null;
+      GD.folderId = null;
+      try {
+        const cfg = JSON.parse(localStorage.getItem('orGD') || '{}');
+        delete cfg.token;
+        delete cfg.fileId;
+        delete cfg.folderId;
+        localStorage.setItem('orGD', JSON.stringify(cfg));
+      } catch(e) {}
+      return false;
+    }
     GD.userEmail = info.email || GD.userEmail || '';
     return true;
   } catch { return false; }
@@ -7633,81 +7787,89 @@ function gdDisconnect() {
 }
 
 /* ── Drive API Helpers ─────────────────────── */
-async function gdRequest(url, options = {}) {
+/* ── Central fetch helper — handles 401/403 ── */
+async function gdFetch(url, options = {}) {
   const resp = await fetch(url, {
     ...options,
     headers: {
       'Authorization': 'Bearer ' + GD.accessToken,
-      'Content-Type': 'application/json',
       ...(options.headers || {})
     }
   });
+
   if (resp.status === 401) {
+    // Token หมดอายุ → ล้างทุกอย่างแล้วแจ้ง re-auth
     GD.accessToken = null;
+    GD.fileId      = null;
+    GD.folderId    = null;
+    // ล้าง token ใน localStorage ด้วย (ไม่ให้ reload แล้วใช้ token เก่า)
+    try {
+      const cfg = JSON.parse(localStorage.getItem('orGD') || '{}');
+      delete cfg.token;
+      delete cfg.fileId;
+      delete cfg.folderId;
+      localStorage.setItem('orGD', JSON.stringify(cfg));
+    } catch(e) {}
     gdUpdateUI(false);
-    throw new Error('Token หมดอายุ กรุณาเชื่อมต่อใหม่');
+    throw new Error('401: Token หมดอายุ — กรุณากดเชื่อมต่อ Google Drive ใหม่');
   }
+
   if (resp.status === 403) {
-    // Token ใหม่แต่ fileId/folderId เก่าใช้ไม่ได้ → ล้าง cache แล้วลองใหม่
+    // ไม่มีสิทธิ์ไฟล์เก่า (token ใหม่) → ล้าง fileId/folderId cache
     GD.fileId   = null;
     GD.folderId = null;
-    const cfg = (() => { try { return JSON.parse(localStorage.getItem('orGD')||'{}'); } catch{return{};} })();
-    delete cfg.fileId;
-    delete cfg.folderId;
-    localStorage.setItem('orGD', JSON.stringify(cfg));
-    throw new Error('ไม่มีสิทธิ์เข้าถึงไฟล์ (403) — ระบบล้าง cache แล้ว กรุณากด Backup อีกครั้ง');
+    try {
+      const cfg = JSON.parse(localStorage.getItem('orGD') || '{}');
+      delete cfg.fileId;
+      delete cfg.folderId;
+      localStorage.setItem('orGD', JSON.stringify(cfg));
+    } catch(e) {}
+    throw new Error('403: ไม่มีสิทธิ์เข้าถึงไฟล์ — ระบบล้าง cache แล้ว กรุณากด Backup อีกครั้ง');
   }
+
   return resp;
 }
 
+/* ── legacy alias (ยังมีที่เรียกบางจุด) ── */
+async function gdRequest(url, options = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  return gdFetch(url, { ...options, headers });
+}
+
 async function gdGetOrCreateFolder() {
-  // ไม่ใช้ cache folderId เพราะ token ใหม่อาจไม่มีสิทธิ์ folder เก่า
-  // Search for folder ทุกครั้ง (มี cache แค่ใน session)
   if (GD.folderId) return GD.folderId;
 
-  try {
-    const q = encodeURIComponent(`name='${GD.FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
-    const r = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`, {
-      headers: { 'Authorization': 'Bearer ' + GD.accessToken }
+  const q = encodeURIComponent(`name='${GD.FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  const r = await gdFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`);
+  if (!r.ok) throw new Error('search folder failed: ' + r.status);
+
+  const data = await r.json();
+  if (data.files && data.files.length > 0) {
+    GD.folderId = data.files[0].id;
+  } else {
+    const cr = await gdFetch('https://www.googleapis.com/drive/v3/files', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: GD.FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' })
     });
-    if (!r.ok) throw new Error('search folder failed: ' + r.status);
-    const data = await r.json();
-    if (data.files && data.files.length > 0) {
-      GD.folderId = data.files[0].id;
-    } else {
-      // Create folder
-      const cr = await fetch('https://www.googleapis.com/drive/v3/files', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + GD.accessToken, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: GD.FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' })
-      });
-      if (!cr.ok) throw new Error('create folder failed: ' + cr.status);
-      const folder = await cr.json();
-      GD.folderId = folder.id;
-    }
-    gdSaveConfig();
-    return GD.folderId;
-  } catch(e) {
-    GD.folderId = null;
-    throw e;
+    if (!cr.ok) throw new Error('create folder failed: ' + cr.status);
+    const folder = await cr.json();
+    GD.folderId = folder.id;
   }
+  return GD.folderId;
 }
 
 async function gdGetFileId() {
-  // ไม่ใช้ cache fileId จาก localStorage เพราะ token ใหม่ไม่มีสิทธิ์ fileId เก่า
-  // ใช้แค่ in-memory cache (GD.fileId) ที่ล้างเมื่อ disconnect
   if (GD.fileId) return GD.fileId;
 
   const folderId = await gdGetOrCreateFolder();
   const q = encodeURIComponent(`name='${GD.FILE_NAME}' and '${folderId}' in parents and trashed=false`);
-  const r = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)`, {
-    headers: { 'Authorization': 'Bearer ' + GD.accessToken }
-  });
+  const r = await gdFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)`);
   if (!r.ok) return null;
+
   const data = await r.json();
   if (data.files && data.files.length > 0) {
     GD.fileId = data.files[0].id;
-    gdSaveConfig();
   }
   return GD.fileId || null;
 }
@@ -7736,9 +7898,9 @@ async function gdSaveNow(silent = false) {
     let fileId;
     if (existingId) {
       // Update existing file
-      const r = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${existingId}?uploadType=multipart`, {
+      // gdFetch จัดการ 401 อัตโนมัติ (ล้าง token + แจ้ง re-auth)
+      const r = await gdFetch(`https://www.googleapis.com/upload/drive/v3/files/${existingId}?uploadType=multipart`, {
         method: 'PATCH',
-        headers: { 'Authorization': 'Bearer ' + GD.accessToken },
         body: (() => {
           const fd = new FormData();
           fd.append('metadata', new Blob([JSON.stringify({name: GD.FILE_NAME})], {type:'application/json'}));
@@ -7747,12 +7909,14 @@ async function gdSaveNow(silent = false) {
         })()
       });
       if (r.status === 403 || r.status === 404) {
-        // Token ใหม่ไม่มีสิทธิ์ไฟล์เก่า → ล้าง fileId/folderId cache แล้วสร้างใหม่
+        // ไม่มีสิทธิ์ไฟล์เก่า (token ใหม่) → ล้าง cache แล้วสร้างใหม่
         GD.fileId = null; GD.folderId = null;
         existingId = null;
-        const cfg = (() => { try { return JSON.parse(localStorage.getItem('orGD')||'{}'); } catch{return{};} })();
-        delete cfg.fileId; delete cfg.folderId;
-        localStorage.setItem('orGD', JSON.stringify(cfg));
+        try {
+          const cfg = JSON.parse(localStorage.getItem('orGD') || '{}');
+          delete cfg.fileId; delete cfg.folderId;
+          localStorage.setItem('orGD', JSON.stringify(cfg));
+        } catch(e) {}
       } else {
         const data = await r.json();
         fileId = data.id;
@@ -7762,9 +7926,8 @@ async function gdSaveNow(silent = false) {
     if (!existingId && !fileId) {
       // Create new (กรณีไม่มีไฟล์เดิม หรือ 403 จากไฟล์เดิม)
       const freshFolderId = await gdGetOrCreateFolder();
-      const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+      const r = await gdFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + GD.accessToken },
         body: (() => {
           const fd = new FormData();
           fd.append('metadata', new Blob([JSON.stringify({name: GD.FILE_NAME, parents: [freshFolderId]})], {type:'application/json'}));

@@ -7582,89 +7582,33 @@ function gdInit() {
   GD.CLIENT_ID = '142005075916-rdf9a8k3kef8rif6d257p2abokh0uga0.apps.googleusercontent.com';
   GD.userEmail = saved_cfg.email || '';
   GD.accessToken = null;
+  GD.fileId = null;
+  GD.folderId = null;
+  // autoLoad/autoSave: disabled ถาวร — ป้องกัน silent-auth loop
+  GD.autoSave = false;
+  GD.autoLoad = false;
 
-  // ตรวจ scopeVersion — ถ้าเก่ากว่า v2 (drive.appdata) ให้ disable autoLoad/autoSave
-  // เพื่อป้องกัน silent auth แล้วได้ token scope เก่า → 403 loop
-  const SCOPE_VER = 2; // v2 = drive.appdata only
-  if ((saved_cfg.scopeVer || 0) < SCOPE_VER) {
-    // scope เปลี่ยน → ต้อง re-consent → ปิด auto features ไว้ก่อน
-    GD.autoSave = false;
-    GD.autoLoad = false;
-    // อัปเดต localStorage
-    try {
-      const cfg = JSON.parse(localStorage.getItem('orGD') || '{}');
-      cfg.autoSave = false;
-      cfg.autoLoad = false;
-      cfg.scopeVer = SCOPE_VER;
-      localStorage.setItem('orGD', JSON.stringify(cfg));
-    } catch(e) {}
-  } else {
-    GD.autoSave = saved_cfg.autoSave || false;
-    GD.autoLoad = saved_cfg.autoLoad || false;
-  }
+  // ล้าง localStorage เก่าที่อาจมี autoLoad:true / token เก่า
+  try {
+    const cfg = JSON.parse(localStorage.getItem('orGD') || '{}');
+    cfg.autoLoad = false;
+    cfg.autoSave = false;
+    delete cfg.token;
+    delete cfg.fileId;
+    delete cfg.folderId;
+    cfg.scopeVer = 2;
+    localStorage.setItem('orGD', JSON.stringify(cfg));
+  } catch(e) {}
 
   gdUpdateUI(false);
-
-  if (GD.CLIENT_ID && (GD.autoLoad || GD.autoSave)) {
-    gdSilentAuth();
-  }
 }
 
 function gdSilentAuth() {
-  // รอ google.accounts.oauth2 พร้อม (max 8 วินาที)
-  let attempts = 0;
-  const tryAuth = () => {
-    attempts++;
-    if (window.google?.accounts?.oauth2) {
-      _gdSilentAuthNow();
-    } else if (attempts < 16) {
-      setTimeout(tryAuth, 500);
-    }
-    // ถ้าหมดเวลาก็แค่ไม่ auto-connect (user กด Backup เองได้)
-  };
-  setTimeout(tryAuth, 500);
+  // disabled — ป้องกัน loop จาก scope เก่า
 }
 
 function _gdSilentAuthNow() {
-  try {
-    GD.tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: GD.CLIENT_ID,
-      scope: GD.SCOPES,
-      prompt: '',          // silent — ไม่ popup ถ้า Google session ยังอยู่
-      callback: async (response) => {
-        if (response.error) {
-          // silent fail = ปกติ (session หมด) ไม่ต้อง error
-          return;
-        }
-        GD.accessToken = response.access_token;
-        GD.fileId = null;
-        GD.folderId = null;
-
-        // ตรวจสอบ scope ที่ได้รับ — ต้องมี drive.appdata
-        // (ถ้า user เคย approve scope เก่าไว้ token จะไม่มี appdata → ต้อง re-consent)
-        try {
-          const ti = await fetch(
-            'https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=' + GD.accessToken
-          );
-          const info = await ti.json();
-          if (!info.scope || !info.scope.includes('drive.appdata')) {
-            // scope ไม่ถูกต้อง → ล้าง token แล้วแจ้งให้ re-connect
-            GD.accessToken = null;
-            gdUpdateUI(false);
-            showT('🔄 กรุณากดเชื่อมต่อ Google Drive ใหม่ 1 ครั้ง (อัปเดต permission)', 'e');
-            return;
-          }
-          GD.userEmail = info.email || GD.userEmail || '';
-        } catch(e) {}
-
-        gdUpdateUI(true);
-        if (GD.autoLoad) gdLoadLatest(true);
-      }
-    });
-    GD.tokenClient.requestAccessToken({ prompt: '' });
-  } catch(e) {
-    // GIS ไม่พร้อม — ไม่เป็นไร user กด connect เองได้
-  }
+  // disabled — ใช้ gdConnect() แทน
 }
 
 function gdSaveConfig() {
@@ -7816,7 +7760,7 @@ function gdConnect() {
         if (emailEl) emailEl.textContent = '👤 ' + GD.userEmail;
       }
 
-      if (GD.autoLoad) await gdLoadLatest(true);
+      // autoLoad disabled — user กด Restore เองได้
     }
   });
   GD.tokenClient.requestAccessToken({ prompt: 'select_account' });

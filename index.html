@@ -7575,6 +7575,9 @@ function gdConnect() {
         return;
       }
       GD.accessToken = response.access_token;
+      // ล้าง fileId/folderId เก่า เพราะ token ใหม่อาจไม่มีสิทธิ์
+      GD.fileId = null;
+      GD.folderId = null;
       // Get user info
       try {
         const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
@@ -7644,42 +7647,63 @@ async function gdRequest(url, options = {}) {
     gdUpdateUI(false);
     throw new Error('Token หมดอายุ กรุณาเชื่อมต่อใหม่');
   }
+  if (resp.status === 403) {
+    // Token ใหม่แต่ fileId/folderId เก่าใช้ไม่ได้ → ล้าง cache แล้วลองใหม่
+    GD.fileId   = null;
+    GD.folderId = null;
+    const cfg = (() => { try { return JSON.parse(localStorage.getItem('orGD')||'{}'); } catch{return{};} })();
+    delete cfg.fileId;
+    delete cfg.folderId;
+    localStorage.setItem('orGD', JSON.stringify(cfg));
+    throw new Error('ไม่มีสิทธิ์เข้าถึงไฟล์ (403) — ระบบล้าง cache แล้ว กรุณากด Backup อีกครั้ง');
+  }
   return resp;
 }
 
 async function gdGetOrCreateFolder() {
+  // ไม่ใช้ cache folderId เพราะ token ใหม่อาจไม่มีสิทธิ์ folder เก่า
+  // Search for folder ทุกครั้ง (มี cache แค่ใน session)
   if (GD.folderId) return GD.folderId;
-  // Check cache
-  const cfg = (() => { try { return JSON.parse(localStorage.getItem('orGD')||'{}'); } catch{return{};} })();
-  if (cfg.folderId) { GD.folderId = cfg.folderId; return GD.folderId; }
 
-  // Search for folder
-  const q = encodeURIComponent(`name='${GD.FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
-  const r = await gdRequest(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`);
-  const data = await r.json();
-  if (data.files && data.files.length > 0) {
-    GD.folderId = data.files[0].id;
-  } else {
-    // Create folder
-    const cr = await gdRequest('https://www.googleapis.com/drive/v3/files', {
-      method: 'POST',
-      body: JSON.stringify({ name: GD.FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' })
+  try {
+    const q = encodeURIComponent(`name='${GD.FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+    const r = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`, {
+      headers: { 'Authorization': 'Bearer ' + GD.accessToken }
     });
-    const folder = await cr.json();
-    GD.folderId = folder.id;
+    if (!r.ok) throw new Error('search folder failed: ' + r.status);
+    const data = await r.json();
+    if (data.files && data.files.length > 0) {
+      GD.folderId = data.files[0].id;
+    } else {
+      // Create folder
+      const cr = await fetch('https://www.googleapis.com/drive/v3/files', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + GD.accessToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: GD.FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' })
+      });
+      if (!cr.ok) throw new Error('create folder failed: ' + cr.status);
+      const folder = await cr.json();
+      GD.folderId = folder.id;
+    }
+    gdSaveConfig();
+    return GD.folderId;
+  } catch(e) {
+    GD.folderId = null;
+    throw e;
   }
-  gdSaveConfig();
-  return GD.folderId;
 }
 
 async function gdGetFileId() {
+  // ไม่ใช้ cache fileId จาก localStorage เพราะ token ใหม่ไม่มีสิทธิ์ fileId เก่า
+  // ใช้แค่ in-memory cache (GD.fileId) ที่ล้างเมื่อ disconnect
   if (GD.fileId) return GD.fileId;
-  const cfg = (() => { try { return JSON.parse(localStorage.getItem('orGD')||'{}'); } catch{return{};} })();
-  if (cfg.fileId) { GD.fileId = cfg.fileId; return GD.fileId; }
 
   const folderId = await gdGetOrCreateFolder();
   const q = encodeURIComponent(`name='${GD.FILE_NAME}' and '${folderId}' in parents and trashed=false`);
-  const r = await gdRequest(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)`);
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)`, {
+    headers: { 'Authorization': 'Bearer ' + GD.accessToken }
+  });
+  if (!r.ok) return null;
   const data = await r.json();
   if (data.files && data.files.length > 0) {
     GD.fileId = data.files[0].id;
@@ -7705,13 +7729,13 @@ async function gdSaveNow(silent = false) {
       orDocs: JSON.parse(localStorage.getItem('orDocs') || '[]'),
     }, null, 2);
 
-    const folderId = await gdGetOrCreateFolder();
-    const existingId = await gdGetFileId();
+    await gdGetOrCreateFolder();
+    let existingId = await gdGetFileId();
     const blob = new Blob([payload], {type: 'application/json'});
 
     let fileId;
     if (existingId) {
-      // Update existing
+      // Update existing file
       const r = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${existingId}?uploadType=multipart`, {
         method: 'PATCH',
         headers: { 'Authorization': 'Bearer ' + GD.accessToken },
@@ -7722,20 +7746,36 @@ async function gdSaveNow(silent = false) {
           return fd;
         })()
       });
-      const data = await r.json();
-      fileId = data.id;
-    } else {
-      // Create new
+      if (r.status === 403 || r.status === 404) {
+        // Token ใหม่ไม่มีสิทธิ์ไฟล์เก่า → ล้าง fileId/folderId cache แล้วสร้างใหม่
+        GD.fileId = null; GD.folderId = null;
+        existingId = null;
+        const cfg = (() => { try { return JSON.parse(localStorage.getItem('orGD')||'{}'); } catch{return{};} })();
+        delete cfg.fileId; delete cfg.folderId;
+        localStorage.setItem('orGD', JSON.stringify(cfg));
+      } else {
+        const data = await r.json();
+        fileId = data.id;
+      }
+    }
+
+    if (!existingId && !fileId) {
+      // Create new (กรณีไม่มีไฟล์เดิม หรือ 403 จากไฟล์เดิม)
+      const freshFolderId = await gdGetOrCreateFolder();
       const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + GD.accessToken },
         body: (() => {
           const fd = new FormData();
-          fd.append('metadata', new Blob([JSON.stringify({name: GD.FILE_NAME, parents: [folderId]})], {type:'application/json'}));
+          fd.append('metadata', new Blob([JSON.stringify({name: GD.FILE_NAME, parents: [freshFolderId]})], {type:'application/json'}));
           fd.append('file', blob);
           return fd;
         })()
       });
+      if (!r.ok) {
+        const errData = await r.json().catch(() => ({}));
+        throw new Error('สร้างไฟล์ไม่สำเร็จ (' + r.status + '): ' + (errData?.error?.message || ''));
+      }
       const data = await r.json();
       fileId = data.id;
       GD.fileId = fileId;

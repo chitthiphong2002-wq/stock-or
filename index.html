@@ -8422,11 +8422,33 @@ function saveNewPin() {
 // Init
 (function initPin() {
   if (!isAuthenticated()) {
-    document.getElementById('pinScreen')?.classList.remove('hidden');
-    setTimeout(() => {
-      const tf = document.getElementById('pinTextField');
-      if (tf) tf.focus();
-    }, 200);
+    const pinScreen = document.getElementById('pinScreen');
+    // แสดงหน้า login ทันที แต่ซ่อน input ก่อนจนกว่าจะ sync PIN เสร็จ
+    pinScreen?.classList.remove('hidden');
+
+    // ── ดึง PIN ล่าสุดจาก Firebase ก่อนให้กรอก ──
+    function tryFbSync(attempt) {
+      if (window._fbRead) {
+        window._fbRead('orPinHash').then(val => {
+          if (val && val !== localStorage.getItem(PIN_KEY)) {
+            localStorage.setItem(PIN_KEY, val);
+          }
+          // focus หลัง sync เสร็จ
+          const tf = document.getElementById('pinTextField');
+          if (tf) tf.focus();
+        }).catch(() => {
+          const tf = document.getElementById('pinTextField');
+          if (tf) tf.focus();
+        });
+      } else if (attempt < 20) {
+        // รอ Firebase ready (max 2 วินาที)
+        setTimeout(() => tryFbSync(attempt + 1), 100);
+      } else {
+        const tf = document.getElementById('pinTextField');
+        if (tf) tf.focus();
+      }
+    }
+    tryFbSync(0);
   } else {
     document.getElementById('pinScreen')?.classList.add('hidden');
   }

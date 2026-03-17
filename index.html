@@ -7582,32 +7582,74 @@ function gdInit() {
   GD.CLIENT_ID = '142005075916-rdf9a8k3kef8rif6d257p2abokh0uga0.apps.googleusercontent.com';
   GD.autoSave  = saved_cfg.autoSave || false;
   GD.autoLoad  = saved_cfg.autoLoad || false;
-  GD.accessToken = saved_cfg.token || null;
-  gdUpdateUI();
+  GD.userEmail = saved_cfg.email || '';
+  // ไม่โหลด token เก่า — token มีอายุ 1 ชั่วโมง reload แล้วหมดอายุแน่นอน
+  // ถ้า autoLoad เปิดอยู่ → silent re-auth ผ่าน GIS แล้วค่อย load
+  GD.accessToken = null;
+  gdUpdateUI(false);
 
-  if (GD.CLIENT_ID && GD.accessToken) {
-    // Try to validate token silently
-    gdValidateToken().then(ok => {
-      if (ok) {
+  if (GD.CLIENT_ID && (GD.autoLoad || GD.autoSave)) {
+    // รอให้ Google GIS script โหลดเสร็จก่อน แล้ว silent re-auth
+    gdSilentAuth();
+  }
+}
+
+function gdSilentAuth() {
+  // รอ google.accounts.oauth2 พร้อม (max 8 วินาที)
+  let attempts = 0;
+  const tryAuth = () => {
+    attempts++;
+    if (window.google?.accounts?.oauth2) {
+      _gdSilentAuthNow();
+    } else if (attempts < 16) {
+      setTimeout(tryAuth, 500);
+    }
+    // ถ้าหมดเวลาก็แค่ไม่ auto-connect (user กด Backup เองได้)
+  };
+  setTimeout(tryAuth, 500);
+}
+
+function _gdSilentAuthNow() {
+  try {
+    GD.tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GD.CLIENT_ID,
+      scope: GD.SCOPES,
+      prompt: '',          // silent — ไม่ popup ถ้า Google session ยังอยู่
+      callback: async (response) => {
+        if (response.error) {
+          // silent fail = ปกติ (session หมด) ไม่ต้อง error
+          return;
+        }
+        GD.accessToken = response.access_token;
+        GD.fileId = null;
+        GD.folderId = null;
+        try {
+          const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: { Authorization: 'Bearer ' + GD.accessToken }
+          });
+          const info = await r.json();
+          GD.userEmail = info.email || GD.userEmail || '';
+        } catch(e) {}
         gdUpdateUI(true);
         if (GD.autoLoad) gdLoadLatest(true);
-      } else {
-        GD.accessToken = null;
-        gdUpdateUI(false);
       }
     });
+    GD.tokenClient.requestAccessToken({ prompt: '' });
+  } catch(e) {
+    // GIS ไม่พร้อม — ไม่เป็นไร user กด connect เองได้
   }
 }
 
 function gdSaveConfig() {
+  // ไม่บันทึก token ลง localStorage เพราะ Google OAuth2 token มีอายุ 1 ชั่วโมง
+  // หลัง reload ให้ user re-auth ใหม่ผ่าน GIS (ซึ่ง silent ได้ถ้า session ยังอยู่)
   localStorage.setItem('orGD', JSON.stringify({
     clientId: GD.CLIENT_ID,
     autoSave: GD.autoSave,
     autoLoad: GD.autoLoad,
-    token: GD.accessToken,
+    // token: ไม่เซฟ
     email: GD.userEmail,
-    fileId: GD.fileId,
-    folderId: GD.folderId,
+    // fileId/folderId: ไม่เซฟ เพราะ token ใหม่อาจไม่มีสิทธิ์
   }));
 }
 
@@ -7744,7 +7786,7 @@ function gdConnect() {
       if (GD.autoLoad) await gdLoadLatest(true);
     }
   });
-  GD.tokenClient.requestAccessToken({ prompt: 'consent' });
+  GD.tokenClient.requestAccessToken({ prompt: 'select_account' });
 }
 
 async function gdValidateToken() {

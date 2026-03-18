@@ -534,7 +534,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
   .card[style*="min-width:280px"] { min-width:unset !important; max-width:100% !important; }
 
   /* Stats bar */
-  .sb { display:grid !important; grid-template-columns:repeat(2,1fr); gap:6px; margin-bottom:8px; }
+  /* .sb hidden on mobile — ซ่อน stats block บนมือถือตามที่ต้องการ */
   .si { padding:8px 10px; }
   .si .nm { font-size:1.1rem; }
   .si .lb { font-size:.65rem; }
@@ -740,14 +740,23 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
         document.hidden ? setOffline() : setOnline();
       });
       // keep-alive ทุก 2 นาที (กันหมดอายุ)
-      setInterval(setOnline, 120_000);
+      setInterval(setOnline, 60_000); // keep-alive ทุก 1 นาที (กัน ghost users)
 
       // ── Listen presence collection → แสดงผล ──────────────────
       const presCol = collection(db, 'presence');
       onSnapshot(presCol, snap => {
+        const now = Date.now();
         const users = [];
-        snap.forEach(d => { if (d.data().online) users.push(d.data()); });
-        // ✅ FIX: นับ user ปัจจุบันด้วย (ก่อนหน้านี้อาจไม่แสดงตัวเอง)
+        snap.forEach(d => {
+          const data = d.data();
+          if (!data.online) return;
+          // กรองเฉพาะที่ lastSeen ไม่เกิน 5 นาที (กัน ghost users)
+          if (data.lastSeen) {
+            const ts = data.lastSeen.toMillis ? data.lastSeen.toMillis() : (data.lastSeen.seconds ? data.lastSeen.seconds * 1000 : 0);
+            if (ts && (now - ts) > 5 * 60 * 1000) return; // เก่าเกิน 5 นาที ถือว่า offline
+          }
+          users.push(data);
+        });
         window._presenceUsers = users;
         if (typeof window._renderPresence === 'function') window._renderPresence(users);
       });

@@ -672,9 +672,16 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
           localStorage.setItem('orItems', remote);
           // rebuild ITEMS array ก่อน render (ไม่งั้น rItems() ใช้ข้อมูลเก่า)
           try {
-            if (Array.isArray(val) && val.length) {
+            // ✅ FIX: ใช้ Array.isArray(val) เท่านั้น (ไม่เช็ค val.length)
+            // เพื่อให้ sync ได้แม้ Firebase มีรายการน้อยกว่า default
+            if (Array.isArray(val)) {
+              // Merge: เอา Firebase เป็นหลัก แต่เพิ่มรายการ default ที่ไม่มีใน Firebase
+              const fbCodes = new Set(val.map(i => i.n));
+              const defaultOnly = ITEMS.filter(i => !fbCodes.has(i.n));
               ITEMS.length = 0;
               val.forEach(i => ITEMS.push(i));
+              // เพิ่ม default items ที่ Firebase ไม่มี (กันหาย)
+              defaultOnly.forEach(i => ITEMS.push(i));
               if (window.ITOK) window.ITOK = ITEMS.map(i => ({...i, tk: tok(i.d+' '+i.n)}));
             }
             if (typeof rItems === 'function') rItems();
@@ -4962,7 +4969,7 @@ function searchEntry(val) {
   if (!matches.length) { res.style.display = 'none'; return; }
   res.style.display = 'block';
   res.innerHTML = matches.map(i => `
-    <div class="sr-row" onclick="addEntryItem('${i.n}','${esc(i.d)}')">
+    <div class="sr-row" data-code="${esc(i.n)}" data-desc="${esc(i.d)}" onclick="addEntryItem(this.dataset.code,this.dataset.desc)">
       <span class="item-no ${i.n ? '' : 'empty'}">${i.n || '—'}</span>
       <span style="flex:1">${esc(i.d)}</span>
     </div>
@@ -5527,7 +5534,7 @@ function searchAiAdd(val) {
   if (!matches.length) { res.style.display = 'none'; return; }
   res.style.display = 'block';
   res.innerHTML = matches.map(i => `
-    <div class="sr-row" onclick="selectAiAddItem('${i.n}','${esc(i.d)}')">
+    <div class="sr-row" data-code="${esc(i.n)}" data-desc="${esc(i.d)}" onclick="selectAiAddItem(this.dataset.code,this.dataset.desc)">
       <span class="item-no">${i.n}</span>
       <span style="flex:1;font-size:.8rem">${esc(i.d)}</span>
     </div>`).join('');
@@ -6316,7 +6323,7 @@ function searchTpl(val) {
   if (!matches.length) { res.style.display = 'none'; return; }
   res.style.display = 'block';
   res.innerHTML = matches.map(i => `
-    <div class="sr-row" onclick="addTplItem('${i.n}','${esc(i.d)}')">
+    <div class="sr-row" data-code="${esc(i.n)}" data-desc="${esc(i.d)}" onclick="addTplItem(this.dataset.code,this.dataset.desc)">
       <span class="item-no">${i.n}</span>
       <span style="flex:1">${esc(i.d)}</span>
       <span style="color:var(--gd);font-size:.8rem">+ เพิ่ม</span>
@@ -7515,9 +7522,14 @@ function _reloadAppData() {
     const oi = localStorage.getItem('orItems');
     if (oi) {
       const arr = JSON.parse(oi);
-      if (Array.isArray(arr) && arr.length) {
+      // ✅ FIX: ใช้ Array.isArray(arr) เท่านั้น ไม่เช็ค arr.length
+      if (Array.isArray(arr)) {
+        // Merge: localStorage/Firebase เป็นหลัก + รายการ default ที่ไม่มี (กัน reset)
+        const savedCodes = new Set(arr.map(i => i.n));
+        const defaultOnly = ITEMS.filter(i => !savedCodes.has(i.n));
         ITEMS.length = 0;
         arr.forEach(i => ITEMS.push(i));
+        defaultOnly.forEach(i => ITEMS.push(i));
       }
     }
   } catch(e){}
@@ -7595,7 +7607,7 @@ function showT(msg, t = '') {
 ══════════════════════════════════════════ */
 function esc(s) {
   if (!s) return '';
-  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 
@@ -8114,7 +8126,7 @@ function eeSearchCode(val) {
   ).slice(0, 8);
   if (!matches.length) { res.style.display='none'; return; }
   res.innerHTML = matches.map(i =>
-    `<div class="sr-row" onclick="eePick('${i.n}','${i.d.replace(/'/g,"\\'")}')">
+    `<div class="sr-row" data-code="${esc(i.n)}" data-desc="${esc(i.d)}" onclick="eePick(this.dataset.code,this.dataset.desc)">
       <span style="font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--primary-l)">${i.n}</span>
       <span style="font-size:.82rem;flex:1">${i.d}</span>
     </div>`

@@ -566,7 +566,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
     const firebaseConfig = {
@@ -616,6 +616,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
     onAuthStateChanged(auth, async user => {
       if (!user) return;
       window._fbReady = true;
+      window._fbMyUid = user.uid;  // เก็บ UID ตัวเองสำหรับ presence
       // Flush any pending writes buffered before auth
       for (const [k,v] of Object.entries(window._fbPending || {})) {
         window._fbWrite(k, v);
@@ -669,7 +670,15 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
         const remote = JSON.stringify(val);
         if (localStorage.getItem('orItems') !== remote) {
           localStorage.setItem('orItems', remote);
-          try { if(typeof rItems==='function') rItems(); } catch(e){}
+          // rebuild ITEMS array ก่อน render (ไม่งั้น rItems() ใช้ข้อมูลเก่า)
+          try {
+            if (Array.isArray(val) && val.length) {
+              ITEMS.length = 0;
+              val.forEach(i => ITEMS.push(i));
+              if (window.ITOK) window.ITOK = ITEMS.map(i => ({...i, tk: tok(i.d+' '+i.n)}));
+            }
+            if (typeof rItems === 'function') rItems();
+          } catch(e) { console.warn('orItems listener:', e); }
         }
       });
       // ── Sync PIN across devices ──
@@ -678,6 +687,45 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
         if (localStorage.getItem('orPinHash') !== val) {
           localStorage.setItem('orPinHash', val);
         }
+      });
+
+      // ── Presence: บันทึกว่า user นี้ online ──────────────────
+      const presenceRef = doc(db, 'presence', user.uid);
+      const deviceName  = (() => {
+        const ua = navigator.userAgent;
+        if (/iPhone|iPad/.test(ua)) return '📱 iOS';
+        if (/Android/.test(ua)) return '📱 Android';
+        if (/Mac/.test(ua)) return '💻 Mac';
+        if (/Windows/.test(ua)) return '🖥️ Windows';
+        return '🖥️ อื่นๆ';
+      })();
+
+      const setOnline = () => setDoc(presenceRef, {
+        online: true,
+        device: deviceName,
+        lastSeen: serverTimestamp(),
+        uid: user.uid,
+      }, { merge: true });
+
+      const setOffline = () => deleteDoc(presenceRef).catch(() => {});
+
+      setOnline();
+
+      // ลบตัวเองเมื่อปิดหน้า / ซ่อน tab
+      window.addEventListener('beforeunload', setOffline);
+      document.addEventListener('visibilitychange', () => {
+        document.hidden ? setOffline() : setOnline();
+      });
+      // keep-alive ทุก 2 นาที (กันหมดอายุ)
+      setInterval(setOnline, 120_000);
+
+      // ── Listen presence collection → แสดงผล ──────────────────
+      const presCol = collection(db, 'presence');
+      onSnapshot(presCol, snap => {
+        const users = [];
+        snap.forEach(d => { if (d.data().online) users.push(d.data()); });
+        window._presenceUsers = users;
+        if (typeof window._renderPresence === 'function') window._renderPresence(users);
       });
     });
   </script>
@@ -802,6 +850,15 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
     📥 Restore
   </button>
   <span id="gdLastSync" style="font-size:.71rem;color:rgba(255,255,255,.5);margin-left:8px"></span>
+
+  <!-- Presence: คนออนไลน์ -->
+  <span id="presenceBadge" title="คนที่ใช้งานอยู่ตอนนี้"
+    style="display:none;align-items:center;gap:5px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:3px 10px;cursor:pointer;margin-left:8px"
+    onclick="openPresenceModal()">
+    <span style="width:7px;height:7px;border-radius:50%;background:#4ade80;animation:pulse 1.5s infinite;flex-shrink:0"></span>
+    <span id="presenceCount" style="font-size:.72rem;color:#fff;font-weight:600">1</span>
+    <span style="font-size:.70rem;color:rgba(255,255,255,.75)">ออนไลน์</span>
+  </span>
 
   <div class="sp"></div>
   <button onclick="window._reloadAppData&&window._reloadAppData()" title="ซิงค์จาก Firebase" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:4px 10px;cursor:pointer;color:#fff;font-size:.72rem;margin-right:6px;font-family:'Sarabun',sans-serif">🔄 ซิงค์</button>
@@ -1318,7 +1375,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
         <label>ชื่อรายการ (Stock Card) *</label>
         <input type="text" id="eiDesc" placeholder="ชื่อสินค้าตาม Stock Card">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
         <div>
           <label>MIN</label>
           <input type="number" id="eiMin" placeholder="0" min="0" style="width:100%">
@@ -1326,6 +1383,10 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
         <div>
           <label>MAX</label>
           <input type="number" id="eiMax" placeholder="0" min="0" style="width:100%">
+        </div>
+        <div>
+          <label>คงเหลือ</label>
+          <input type="number" id="eiBal" placeholder="0" min="0" style="width:100%;border-color:var(--info)" title="ยอดคงเหลือปัจจุบัน">
         </div>
       </div>
       <div id="eiWarn" style="font-size:.78rem;color:#b91c1c;background:#fef2f2;padding:8px 10px;border-radius:6px;display:none;margin-top:10px"></div>
@@ -1394,6 +1455,25 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
   </div>
 </div>
 
+
+<!-- MODAL: Presence (คนออนไลน์) -->
+<div class="modal-bg" id="modalPresence">
+  <div class="modal" style="width:340px">
+    <div class="mh">
+      <span class="mt">🟢 ผู้ใช้งานออนไลน์</span>
+      <span class="mc" onclick="closeModal('modalPresence')">✕</span>
+    </div>
+    <div class="mb2">
+      <div id="presenceList" style="display:flex;flex-direction:column;gap:8px;min-height:40px"></div>
+      <div style="font-size:.74rem;color:var(--g4);margin-top:12px;text-align:center">
+        อัปเดตอัตโนมัติแบบ realtime
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn bs" onclick="closeModal('modalPresence')">ปิด</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL: GDrive Restore Confirm -->
 <div class="modal-bg" id="modalGDRestore">
@@ -2269,25 +2349,34 @@ const ITEMS=[
 {n:'MS1114',d:'Suction Tubing For con EVO SBK (box of 10)',bal:0,uom:'PIECE',min:null,max:null,price:0}
 ];
 
-// Load overrides from localStorage (persists edits/deletes across reload)
+// Load from localStorage — orItems คือ source of truth
+// ถ้ามีข้อมูลใน localStorage → ใช้เป็นหลัก แล้ว merge default ใหม่ที่ยังไม่มี
+// วิธีนี้ทำให้รายการที่ user เพิ่ม/แก้ไขไม่หายเมื่อ update ไฟล์ใหม่
 (function() {
   try {
     const ov = localStorage.getItem('orItems');
     if (ov) {
       const saved_items = JSON.parse(ov);
-      // Merge: update existing, add new, mark deleted
-      const map = {};
-      ITEMS.forEach((it,i) => { map[it.n] = i; });
-      saved_items.forEach(sit => {
-        if (sit._deleted) {
-          if (map[sit.n] !== undefined) ITEMS.splice(map[sit.n], 1);
-        } else if (map[sit.n] !== undefined) {
-          ITEMS[map[sit.n]] = sit;
-        } else {
-          ITEMS.push(sit);
-        }
+      // saved_items คือ array ที่ user บันทึกไว้ (รวมทั้ง default + ที่เพิ่มเอง)
+      // สร้าง map จาก saved เพื่อ lookup เร็ว
+      const savedMap = {};
+      saved_items.forEach(sit => { if (!sit._deleted) savedMap[sit.n] = sit; });
+
+      // เริ่มจาก saved_items เป็นหลัก กรองรายการที่ถูก delete ออก
+      const base = saved_items.filter(s => !s._deleted);
+
+      // เพิ่มรายการ hardcode ใหม่ที่ไม่มีใน saved (เผื่อมีการเพิ่ม default ใหม่ใน update)
+      const baseMap = {};
+      base.forEach(it => { baseMap[it.n] = true; });
+      ITEMS.forEach(def => {
+        if (!baseMap[def.n]) base.push(def); // default ใหม่ที่ยังไม่เคยมี
       });
+
+      // replace ITEMS array in place
+      ITEMS.length = 0;
+      base.forEach(it => ITEMS.push(it));
     }
+    // ถ้าไม่มี orItems → ใช้ hardcode ทั้งหมด (first run)
   } catch(e) { console.warn('orItems load error:', e); }
 })();
 
@@ -6689,7 +6778,7 @@ let _editItemCode = null;
 function openAddItem() {
   _editItemCode = null;
   document.getElementById('editItemTitle').textContent = 'เพิ่มรายการใหม่';
-  ['eiCode','eiDesc','eiUom','eiMin','eiMax'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  ['eiCode','eiDesc','eiUom','eiMin','eiMax','eiBal'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
   document.getElementById('eiCode').readOnly = false;
   document.getElementById('eiWarn').style.display = 'none';
   document.getElementById('modalEditItem')?.classList.add('open');
@@ -6705,6 +6794,7 @@ function openEditItem(code) {
   document.getElementById('eiUom').value  = it.uom || '';
   document.getElementById('eiMin').value  = it.min != null ? it.min : '';
   document.getElementById('eiMax').value  = it.max != null ? it.max : '';
+  document.getElementById('eiBal').value  = it.bal != null ? it.bal : 0;
   document.getElementById('eiCode').readOnly = false;
   document.getElementById('eiWarn').style.display = 'none';
   document.getElementById('modalEditItem')?.classList.add('open');
@@ -6722,6 +6812,8 @@ function saveEditItem() {
   const uom  = document.getElementById('eiUom').value.trim();
   const min  = parseFloat(document.getElementById('eiMin').value) || 0;
   const max  = parseFloat(document.getElementById('eiMax').value) || 0;
+  const bal  = parseFloat(document.getElementById('eiBal').value);
+  const newBal = isNaN(bal) ? null : bal;
   const warn = document.getElementById('eiWarn');
   warn.style.display = 'none';
 
@@ -6732,7 +6824,7 @@ function saveEditItem() {
     // New
     const dup = ITEMS.find(i => i.n === code);
     if (dup) { warn.style.display=''; warn.textContent='รหัส '+code+' มีอยู่แล้ว: "'+dup.d+'"'; return; }
-    ITEMS.push({n:code, d:desc, bal:0, uom, min, max, price:0});
+    ITEMS.push({n:code, d:desc, bal: newBal !== null ? newBal : 0, uom, min, max, price:0});
     showT('เพิ่มรายการ '+code+' แล้ว', 'ok');
   } else {
     // Edit
@@ -6746,7 +6838,7 @@ function saveEditItem() {
       localStorage.setItem('orSE', JSON.stringify(saved));
       if (window._fbWrite) window._fbWrite('orSE', saved);
     }
-    ITEMS[idx] = {...ITEMS[idx], n:code, d:desc, uom, min, max};
+    ITEMS[idx] = {...ITEMS[idx], n:code, d:desc, uom, min, max, ...(newBal !== null ? {bal: newBal} : {})};
     showT('แก้ไข '+code+' แล้ว', 'ok');
   }
   // Rebuild search index + sync (saveItems ทำ localStorage + Firebase ในที่เดียว)
@@ -7523,6 +7615,43 @@ const GD = {
 };
 
 /* ── Init ─────────────────────────────────── */
+/* ── Presence helpers ───────────────────────── */
+window._renderPresence = function(users) {
+  // Badge
+  const badge = document.getElementById('presenceBadge');
+  const count = document.getElementById('presenceCount');
+  if (badge) {
+    badge.style.display = users.length > 0 ? 'flex' : 'none';
+    if (count) count.textContent = users.length;
+  }
+
+  // Modal list
+  const list = document.getElementById('presenceList');
+  if (!list) return;
+  if (users.length === 0) {
+    list.innerHTML = '<div style="color:var(--g4);font-size:.84rem;text-align:center;padding:12px">ไม่มีผู้ใช้งานออนไลน์</div>';
+    return;
+  }
+  list.innerHTML = users.map(u => {
+    const ts = u.lastSeen?.toDate ? u.lastSeen.toDate() : new Date();
+    const timeStr = ts.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
+    const isMe = window._fbMyUid && u.uid === window._fbMyUid;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:${isMe ? 'var(--primary-b)' : 'var(--g1)'};border-radius:8px;border:1px solid ${isMe ? 'var(--primary-l)' : 'var(--g3)'}">
+      <span style="width:9px;height:9px;border-radius:50%;background:#22c55e;flex-shrink:0"></span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.83rem;font-weight:600;color:var(--g8)">${u.device || '🖥️ อุปกรณ์'}${isMe ? ' <span style="font-size:.72rem;color:var(--primary);font-weight:400">(คุณ)</span>' : ''}</div>
+        <div style="font-size:.72rem;color:var(--g4)">เข้าใช้ล่าสุด ${timeStr} น.</div>
+      </div>
+    </div>`;
+  }).join('');
+};
+
+function openPresenceModal() {
+  const users = window._presenceUsers || [];
+  window._renderPresence(users);
+  document.getElementById('modalPresence')?.classList.add('open');
+}
+
 function gdInit() {
   // ล้าง localStorage เก่าทั้งหมด (token/fileId เก่าไม่ใช้แล้ว)
   try {

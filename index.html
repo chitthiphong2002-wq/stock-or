@@ -591,11 +591,16 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
     // ── Public helpers exposed to global scope ──
     window._fbReady = false;
     window._fbPending = {};  // buffer writes before auth ready
+    // ── Helper: ลบ undefined ออกจากข้อมูลก่อนส่ง Firestore ──
+    function _sanitize(val) {
+      return JSON.parse(JSON.stringify(val, (k, v) => v === undefined ? null : v));
+    }
+
     window._fbWrite = async function(key, val) {
       if (!window._fbReady) { window._fbPending[key] = val; return; }
       try {
         const patch = {};
-        patch[key] = val;
+        patch[key] = _sanitize(val);
         await setDoc(DOC, patch, { merge: true });
         const dot = document.getElementById('fbSyncDot');
         if (dot) { dot.style.background='#22c55e'; setTimeout(()=>dot.style.background='#22c55e',1000); }

@@ -570,7 +570,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
     const firebaseConfig = {
@@ -612,6 +612,8 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
         if (!snap.exists()) return;
         const data = snap.data();
         if (key in data) cb(data[key]);
+      }, err => {
+        if (err.code !== 'permission-denied') console.warn('FB listen', key, err);
       });
     };
 
@@ -712,54 +714,6 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
         }
       });
 
-      // ── Presence: บันทึกว่า user นี้ online ──────────────────
-      const presenceRef = doc(db, 'presence', user.uid);
-      const deviceName  = (() => {
-        const ua = navigator.userAgent;
-        if (/iPhone|iPad/.test(ua)) return '📱 iOS';
-        if (/Android/.test(ua)) return '📱 Android';
-        if (/Mac/.test(ua)) return '💻 Mac';
-        if (/Windows/.test(ua)) return '🖥️ Windows';
-        return '🖥️ อื่นๆ';
-      })();
-
-      const setOnline = () => setDoc(presenceRef, {
-        online: true,
-        device: deviceName,
-        lastSeen: serverTimestamp(),
-        uid: user.uid,
-      }, { merge: true });
-
-      const setOffline = () => deleteDoc(presenceRef).catch(() => {});
-
-      setOnline();
-
-      // ลบตัวเองเมื่อปิดหน้า / ซ่อน tab
-      window.addEventListener('beforeunload', setOffline);
-      document.addEventListener('visibilitychange', () => {
-        document.hidden ? setOffline() : setOnline();
-      });
-      // keep-alive ทุก 2 นาที (กันหมดอายุ)
-      setInterval(setOnline, 60_000); // keep-alive ทุก 1 นาที (กัน ghost users)
-
-      // ── Listen presence collection → แสดงผล ──────────────────
-      const presCol = collection(db, 'presence');
-      onSnapshot(presCol, snap => {
-        const now = Date.now();
-        const users = [];
-        snap.forEach(d => {
-          const data = d.data();
-          if (!data.online) return;
-          // กรองเฉพาะที่ lastSeen ไม่เกิน 5 นาที (กัน ghost users)
-          if (data.lastSeen) {
-            const ts = data.lastSeen.toMillis ? data.lastSeen.toMillis() : (data.lastSeen.seconds ? data.lastSeen.seconds * 1000 : 0);
-            if (ts && (now - ts) > 5 * 60 * 1000) return; // เก่าเกิน 5 นาที ถือว่า offline
-          }
-          users.push(data);
-        });
-        window._presenceUsers = users;
-        if (typeof window._renderPresence === 'function') window._renderPresence(users);
-      });
     });
   </script>
 </head>
@@ -898,18 +852,6 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> PIN
   </button>
 
-  <span style="width:1px;height:16px;background:rgba(255,255,255,.2);flex-shrink:0"></span>
-
-  <span id="presenceBadge" title="คนที่ใช้งานอยู่ตอนนี้"
-    style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.22);border-radius:20px;padding:3px 11px;cursor:pointer;transition:all .18s"
-    onclick="openPresenceModal()"
-    onmouseover="this.style.background='rgba(255,255,255,.22)'"
-    onmouseout="this.style.background='rgba(255,255,255,.13)'">
-    <span style="width:7px;height:7px;border-radius:50%;background:#4ade80;animation:pulse 1.5s infinite;flex-shrink:0"></span>
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-    <span id="presenceCount" style="font-size:.73rem;color:#fff;font-weight:700">1</span>
-    <span style="font-size:.71rem;color:rgba(255,255,255,.8)">ออนไลน์</span>
-  </span>
 
 </div>
 
@@ -941,7 +883,6 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
   <!-- TABS -->
   <div class="tabs">
     <div class="tab ac" onclick="swTab('entry')"><span class="ico"><svg width="15" height="15"><use href="#ic-entry"/></svg></span> บันทึกรับ/จ่าย</div>
-    <div class="tab" onclick="swTab('ai')"><span class="ico"><svg width="15" height="15"><use href="#ic-ai"/></svg></span> AI อ่านภาพ</div>
     <div class="tab" onclick="swTab('tpl')"><span class="ico"><svg width="15" height="15"><use href="#ic-tpl"/></svg></span> Template อาจารย์</div>
     <div class="tab" onclick="swTab('items')"><span class="ico"><svg width="15" height="15"><use href="#ic-history"/></svg></span> รายการ</div>
     <div class="tab" onclick="swTab('history')"><span class="ico"><svg width="15" height="15"><use href="#ic-history"/></svg></span> ประวัติ</div>
@@ -994,19 +935,6 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
             <div style="margin-bottom:10px">
               <label>หมายเหตุ</label>
               <input type="text" id="txNote" placeholder="เช่น 1. Phaco with IOL : RE อ.อนันต์" oninput="syncCaseLabel(this.value)">
-            </div>
-            <!-- แนบไฟล์ (ซ่อนไว้ก่อน) -->
-            <div style="margin-bottom:4px;display:none" id="entryAttachSection">
-              <label>📎 แนบไฟล์ (รูปภาพ / เอกสาร)</label>
-              <div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap">
-                <label style="background:var(--primary-b);border:1.5px solid var(--primary-l);border-radius:var(--r);padding:6px 12px;cursor:pointer;font-size:.8rem;font-weight:600;color:var(--primary);display:flex;align-items:center;gap:5px;text-transform:none;letter-spacing:0">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                  เลือกไฟล์
-                  <input type="file" id="entryFileInput" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" style="display:none" onchange="entryFilesSelected(this.files)">
-                </label>
-                <span id="entryFileStatus" style="font-size:.76rem;color:var(--g4)">ยังไม่ได้เลือกไฟล์</span>
-              </div>
-              <div id="entryFilePreview" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
             </div>
 
             </div>
@@ -1082,69 +1010,6 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
               </button>
               <button class="btn bs" onclick="clearEntry()"><span class="ico"><svg width="14" height="14"><use href="#ic-trash"/></svg></span> ล้างทั้งหมด</button>
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== TAB: AI ===== -->
-  <div id="tai" class="tc">
-    <div class="card">
-      <div class="ch">
-        <span class="ico"><svg width="15" height="15"><use href="#ic-image"/></svg></span><h2>อัพโหลดภาพใบรับ/ใบจ่าย</h2>
-      </div>
-      <div class="cb">
-
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px">
-          <div><label>📅 วันที่</label><input type="date" id="aiDate"></div>
-          <div>
-            <label>ประเภท</label>
-            <div class="tt">
-              <button class="tb recv ac" id="aiBtnR" onclick="setAiT('receive')"><span class="ico"><svg width="14" height="14"><use href="#ic-recv"/></svg></span> รับ</button>
-              <button class="tb issu" id="aiBtnI" onclick="setAiT('issue')"><span class="ico"><svg width="14" height="14"><use href="#ic-issue"/></svg></span> จ่าย</button>
-            </div>
-          </div>
-          <div>
-            <label>Template อาจารย์ (ใช้ตรวจสอบ)</label>
-            <select id="aiDoc"><option value="">— ไม่ระบุ —</option></select>
-          </div>
-        </div>
-        <div class="uz" id="uz">
-          <input type="file" id="fi" accept="image/*" multiple onchange="hFiles(this.files)">
-          <div class="ic"><span class="ico"><svg width="40" height="40"><use href="#ic-image"/></svg></span></div>
-          <p><strong>คลิกเพื่อเลือกภาพ</strong> หรือลากมาวาง</p>
-          <p style="font-size:.74rem;margin-top:4px;color:var(--g4)">รองรับ JPG, PNG — อัพโหลดหลายภาพได้</p>
-        </div>
-        <div id="pl" style="display:none;margin-top:10px"></div>
-        <!-- API Key inline input -->
-        <div style="margin-top:10px;background:var(--warn-b);border:1.5px solid #fcd34d;border-radius:var(--r);padding:9px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <span style="font-size:.75rem;font-weight:700;color:#92400e;white-space:nowrap">🔑 Gemini API Key</span>
-          <input type="password" id="inlineApiKey" placeholder="วาง API Key ที่นี่..."
-            style="flex:1;min-width:180px;padding:5px 10px;border:1.5px solid #fcd34d;border-radius:5px;font-size:.8rem;font-family:'IBM Plex Mono',monospace;background:#fff;color:var(--g8)"
-            oninput="saveInlineKey(this.value)">
-          <button class="btn" onclick="toggleKeyVis()" id="btnKeyVis"
-            style="padding:5px 9px;background:#fff;border:1.5px solid #fcd34d;color:#92400e;font-size:.75rem">👁</button>
-          <span id="inlineKeyStatus" style="font-size:.74rem;color:#92400e;white-space:nowrap"></span>
-        </div>
-        <div class="br">
-          <button class="btn bp" id="btnA" onclick="analyze()" disabled><span class="ico"><svg width="14" height="14"><use href="#ic-analyze"/></svg></span> วิเคราะห์ด้วย AI</button>
-          <button class="btn bs" onclick="clearAll()"><span class="ico"><svg width="14" height="14"><use href="#ic-trash"/></svg></span> ล้าง</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="ra" style="display:none">
-      <div class="card">
-        <div class="ch">
-          <span id="rsd" class="sd ok"></span>
-          <h2 id="rt2">ผลการวิเคราะห์</h2>
-        </div>
-        <div class="cb">
-          <div id="rc"></div>
-          <div class="br" id="sr" style="display:none">
-            <button class="btn bsv" onclick="saveAiEntries()"><span class="ico"><svg width="14" height="14"><use href="#ic-save"/></svg></span> บันทึกรายการ</button>
-            <button class="btn bs" onclick="clearRes()"><span class="ico"><svg width="14" height="14"><use href="#ic-undo"/></svg></span> ล้างผล</button>
           </div>
         </div>
       </div>
@@ -1503,25 +1368,6 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
   </div>
 </div>
 
-
-<!-- MODAL: Presence (คนออนไลน์) -->
-<div class="modal-bg" id="modalPresence">
-  <div class="modal" style="width:340px">
-    <div class="mh">
-      <span class="mt">🟢 ผู้ใช้งานออนไลน์</span>
-      <span class="mc" onclick="closeModal('modalPresence')">✕</span>
-    </div>
-    <div class="mb2">
-      <div id="presenceList" style="display:flex;flex-direction:column;gap:8px;min-height:40px"></div>
-      <div style="font-size:.74rem;color:var(--g4);margin-top:12px;text-align:center">
-        อัปเดตอัตโนมัติแบบ realtime
-      </div>
-    </div>
-    <div class="mf">
-      <button class="btn bs" onclick="closeModal('modalPresence')">ปิด</button>
-    </div>
-  </div>
-</div>
 
 <!-- MODAL: GDrive Restore Confirm -->
 <div class="modal-bg" id="modalGDRestore">
@@ -2434,9 +2280,6 @@ const CDB=[["Alcohol 70% Cotton Ball","MS1049"],["Cotton bud","MS1057"],["Insuli
    STATE
 ══════════════════════════════════════════ */
 let txType = 'receive';
-let aiType = 'receive';
-let upFiles = [];
-let pendR = [];
 let saved = (() => { try { return JSON.parse(localStorage.getItem('orSE') || '[]'); } catch(e) { console.warn('orSE parse error, resetting:', e.message); localStorage.removeItem('orSE'); return []; } })();
 const PRESET_TEMPLATES = [
   {
@@ -4801,6 +4644,55 @@ let doctors = (() => { try { return JSON.parse(localStorage.getItem('orDocs') ||
 let entryItems = []; // {n, d, qty} for manual entry
 let editDocId = null;
 
+/* ── Search/Match utilities (ใช้โดย search และ item matching) ── */
+function tok(s) {
+  return s.toLowerCase().replace(/[()\\/\-,.%"'\[\]]/g, ' ').split(/\s+/).filter(t => t.length > 1);
+}
+function jac(a, b) {
+  const sa = new Set(a), sb = new Set(b);
+  let c = 0; sa.forEach(t => { if (sb.has(t)) c++; });
+  const u = sa.size + sb.size - c;
+  return u ? c / u : 0;
+}
+function parseTally(s) {
+  if (s == null) return null;
+  s = String(s).trim();
+  if (!s) return null;
+  if (/^\d+$/.test(s)) return parseInt(s, 10);
+  let total = 0;
+  const groups = s.split(/\s+/).filter(x => x);
+  groups.forEach(g => {
+    const crosses = (g.match(/[\/\\]/g) || []).length;
+    if (crosses > 0) { total += crosses * 5; }
+    else { total += (g.match(/[|Ill1]/g) || []).length; }
+  });
+  if (total === 0) { total = (s.match(/[|I]/g) || []).length; }
+  return total > 0 ? total : null;
+}
+function matchItem(aiName, aiCode, aiQty) {
+  const tq = tok((aiName || '') + ' ' + (aiCode || ''));
+  let bestC = null, bestCS = 0;
+  for (const c of CDBTOK) {
+    const s = jac(tq, c.tk);
+    if (s > bestCS) { bestCS = s; bestC = c; }
+  }
+  if (bestCS > 0.28) {
+    const m = ITEMS.find(i => i.n === bestC.code) || {n: bestC.code, d: bestC.name};
+    return {item_no: m.n, desc: m.d, qty: aiQty, mType: bestCS > 0.5 ? 'found' : 'guessed', note: `code.xlsx (${(bestCS*100).toFixed(0)}%)`};
+  }
+  let bestI = null, bestIS = 0;
+  for (const i of ITOK) {
+    const s = jac(tq, i.tk);
+    if (s > bestIS) { bestIS = s; bestI = i; }
+  }
+  if (bestIS > 0.28) return {item_no: bestI.n, desc: bestI.d, qty: aiQty, mType: bestIS > 0.48 ? 'found' : 'guessed', note: `desc (${(bestIS*100).toFixed(0)}%)`};
+  if (aiCode) {
+    const m = ITEMS.find(i => i.n === aiCode.trim());
+    if (m) return {item_no: m.n, desc: m.d, qty: aiQty, mType: 'guessed', note: 'code ตรง'};
+  }
+  return {item_no: aiCode || '', desc: aiName || '', qty: aiQty, mType: 'missing', note: 'ไม่พบในระบบ'};
+}
+
 const ITOK = ITEMS.map(i => ({...i, tk: tok(i.d + ' ' + i.n)}));
 const CDBTOK = CDB.map(([name, code]) => ({name, code, tk: tok(name)}));
 
@@ -4810,12 +4702,6 @@ const CDBTOK = CDB.map(([name, code]) => ({name, code, tk: tok(name)}));
 document.addEventListener('DOMContentLoaded', () => {
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('txDate').value = today;
-  document.getElementById('aiDate').value = today;
-
-  const uz = document.getElementById('uz');
-  uz.addEventListener('dragover', e => { e.preventDefault(); uz.classList.add('do'); });
-  uz.addEventListener('dragleave', () => uz.classList.remove('do'));
-  uz.addEventListener('drop', e => { e.preventDefault(); uz.classList.remove('do'); hFiles(e.dataTransfer.files); });
 
   // ── อัปเดต Min/Max จากข้อมูล Excel ──
   applyMinMaxUpdates();
@@ -4827,11 +4713,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const _pb = document.getElementById('btnTogglePresets');
   if (_pb) _pb.textContent = showPresets ? '🙈 ซ่อน Preset' : '📦 แสดง Preset';
   updateDocSelects();
-  // Load saved API key into inline field
-  initInlineKey();
-  const keyEl = document.getElementById('apiKey');
-  const _savedKey = localStorage.getItem('orApiKey') || '';
-  if (keyEl && _savedKey) { keyEl.value = _savedKey; }
   // Google Drive init
   gdInit();
   const gdTs = localStorage.getItem('orGDLastSync');
@@ -4842,8 +4723,8 @@ document.addEventListener('DOMContentLoaded', () => {
    TABS
 ══════════════════════════════════════════ */
 function swTab(n) {
-  const names = ['entry','ai','tpl','items','history'];
-  const idMap = {entry:'tentry',ai:'tai',tpl:'ttpl',items:'titems',history:'thistory'};
+  const names = ['entry','tpl','items','history'];
+  const idMap = {entry:'tentry',tpl:'ttpl',items:'titems',history:'thistory'};
   document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('ac', names[i] === n));
   document.querySelectorAll('.tc').forEach(c => c.classList.remove('ac'));
   const el = document.getElementById(idMap[n]);
@@ -4861,11 +4742,6 @@ function setT(t) {
   txType = t;
   document.getElementById('btnR')?.classList.toggle('ac', t === 'receive');
   document.getElementById('btnI')?.classList.toggle('ac', t === 'issue');
-}
-function setAiT(t) {
-  aiType = t;
-  document.getElementById('aiBtnR')?.classList.toggle('ac', t === 'receive');
-  document.getElementById('aiBtnI')?.classList.toggle('ac', t === 'issue');
 }
 
 /* ══════════════════════════════════════════
@@ -5143,10 +5019,6 @@ function saveEntry() {
   showT(`✅ บันทึก ${ne.length} รายการ (${txType === 'receive' ? 'รับ' : 'จ่าย'})`, 'ok');
   gdAutoSaveIfEnabled();
   updSum();
-  // Upload pending files if any
-  if (_entryPendingFiles && _entryPendingFiles.length > 0) {
-    uploadEntryFiles(batchId);
-  }
   clearEntry();
 }
 
@@ -5161,589 +5033,7 @@ function clearEntry() {
   syncCaseLabel('');
   const lbl = document.getElementById('txDocLabel');
   if (lbl) { lbl.textContent = '— กรอกด้วยตนเอง / ค้นหา —'; lbl.style.color = 'var(--g4)'; }
-  // Reset file attachment
-  _entryPendingFiles = [];
-  const fi = document.getElementById('entryFileInput');
-  if (fi) fi.value = '';
-  const fs = document.getElementById('entryFileStatus');
-  if (fs) fs.textContent = 'ยังไม่ได้เลือกไฟล์';
-  const fp = document.getElementById('entryFilePreview');
-  if (fp) fp.innerHTML = '';
 }
-
-/* ══════════════════════════════════════════
-   AI TAB
-══════════════════════════════════════════ */
-function hFiles(files) {
-  const newFiles = Array.from(files);
-  // เพิ่มเข้าไปใน upFiles (ไม่แทนที่)
-  newFiles.forEach(f => {
-    // ไม่ซ้ำ name+size
-    if (!upFiles.find(u => u.name === f.name && u.size === f.size)) {
-      upFiles.push(f);
-    }
-  });
-  renderFilePreview();
-  document.getElementById('btnA').disabled = upFiles.length === 0;
-}
-
-function removeFile(idx) {
-  upFiles.splice(idx, 1);
-  renderFilePreview();
-  document.getElementById('btnA').disabled = upFiles.length === 0;
-}
-
-function renderFilePreview() {
-  const pl = document.getElementById('pl');
-  if (!upFiles.length) { pl.style.display = 'none'; pl.innerHTML = ''; return; }
-  pl.style.display = 'block';
-  pl.innerHTML = `
-    <div id="imgGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-top:6px"></div>
-    <div style="margin-top:6px;font-size:.76rem;color:var(--g4)">${upFiles.length} ภาพ · คลิกอัพโหลดเพิ่มได้อีก</div>
-  `;
-  const grid = document.getElementById('imgGrid');
-  upFiles.forEach((f, i) => {
-    const cell = document.createElement('div');
-    cell.style.cssText = 'position:relative;border:1.5px solid var(--g3);border-radius:6px;overflow:hidden;background:#fff';
-    cell.innerHTML = `
-      <div style="width:100%;height:120px;background:var(--g1);display:flex;align-items:center;justify-content:center">
-        <img data-idx="${i}" style="width:100%;height:120px;object-fit:cover;display:block">
-      </div>
-      <div style="padding:4px 8px;font-size:.7rem;color:var(--g6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:1px solid var(--g2)">${f.name}</div>
-      <button onclick="removeFile(${i})" title="ลบภาพนี้"
-        style="position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;border:none;background:rgba(0,0,0,.55);color:#fff;cursor:pointer;font-size:.8rem;display:flex;align-items:center;justify-content:center">✕</button>
-    `;
-    grid.appendChild(cell);
-    // ใช้ FileReader แทน objectURL
-    const r = new FileReader();
-    r.onload = ev => {
-      const img = cell.querySelector('img');
-      if (img) img.src = ev.target.result;
-    };
-    r.readAsDataURL(f);
-  });
-}
-
-function parseExpr(s) {
-  if (!s && s !== 0) return null;
-  s = String(s).trim();
-  if (!s) return null;
-  if (/^\d+(\.\d+)?$/.test(s)) return parseFloat(s);
-  if (/^[\d\s\+]+$/.test(s)) {
-    const sum = s.split('+').reduce((a, n) => a + (parseFloat(n.trim()) || 0), 0);
-    if (sum > 0) return sum;
-  }
-  const t = parseTally(s);
-  return t;
-}
-
-function parseTally(s) {
-  if (s == null) return null;
-  s = String(s).trim();
-  if (!s) return null;
-  if (/^\d+$/.test(s)) return parseInt(s, 10);
-  let total = 0;
-  const groups = s.split(/\s+/).filter(x => x);
-  groups.forEach(g => {
-    const crosses = (g.match(/[\/\\]/g) || []).length;
-    if (crosses > 0) {
-      total += crosses * 5;
-    } else {
-      total += (g.match(/[|Ill1]/g) || []).length;
-    }
-  });
-  if (total === 0) {
-    total = (s.match(/[|I]/g) || []).length;
-  }
-  return total > 0 ? total : null;
-}
-
-function tok(s) {
-  return s.toLowerCase().replace(/[()\\/\-,.%"'\[\]]/g, ' ').split(/\s+/).filter(t => t.length > 1);
-}
-function jac(a, b) {
-  const sa = new Set(a), sb = new Set(b);
-  let c = 0; sa.forEach(t => { if (sb.has(t)) c++; });
-  const u = sa.size + sb.size - c;
-  return u ? c / u : 0;
-}
-
-function matchItem(aiName, aiCode, aiQty) {
-  const tq = tok((aiName || '') + ' ' + (aiCode || ''));
-  // 1. CDB name lookup
-  let bestC = null, bestCS = 0;
-  for (const c of CDBTOK) {
-    const s = jac(tq, c.tk);
-    if (s > bestCS) { bestCS = s; bestC = c; }
-  }
-  if (bestCS > 0.28) {
-    const m = ITEMS.find(i => i.n === bestC.code) || {n: bestC.code, d: bestC.name};
-    return {item_no: m.n, desc: m.d, qty: aiQty, mType: bestCS > 0.5 ? 'found' : 'guessed', note: `code.xlsx (${(bestCS*100).toFixed(0)}%)`};
-  }
-  // 2. ITEMS description
-  let bestI = null, bestIS = 0;
-  for (const i of ITOK) {
-    const s = jac(tq, i.tk);
-    if (s > bestIS) { bestIS = s; bestI = i; }
-  }
-  if (bestIS > 0.28) return {item_no: bestI.n, desc: bestI.d, qty: aiQty, mType: bestIS > 0.48 ? 'found' : 'guessed', note: `desc (${(bestIS*100).toFixed(0)}%)`};
-  // 3. Direct code
-  if (aiCode) {
-    const m = ITEMS.find(i => i.n === aiCode.trim());
-    if (m) return {item_no: m.n, desc: m.d, qty: aiQty, mType: 'guessed', note: 'code ตรง'};
-  }
-  return {item_no: aiCode || '', desc: aiName || '', qty: aiQty, mType: 'missing', note: 'ไม่พบในระบบ'};
-}
-
-function saveInlineKey(val) {
-  val = val.trim();
-  if (val) {
-    localStorage.setItem('orApiKey', val);
-    document.getElementById('inlineKeyStatus').textContent = '✅ บันทึกแล้ว';
-  } else {
-    localStorage.removeItem('orApiKey');
-    document.getElementById('inlineKeyStatus').textContent = '';
-  }
-}
-
-function toggleKeyVis() {
-  const inp = document.getElementById('inlineApiKey');
-  inp.type = inp.type === 'password' ? 'text' : 'password';
-}
-
-function initInlineKey() {
-  const saved = localStorage.getItem('orApiKey') || '';
-  const el = document.getElementById('inlineApiKey');
-  if (el && saved) {
-    el.value = saved;
-    document.getElementById('inlineKeyStatus').textContent = '✅ บันทึกแล้ว';
-  }
-}
-
-async function analyze() {
-  if (!upFiles.length) return;
-  const btn = document.getElementById('btnA');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spin"></span> วิเคราะห์<span class="dot3"></span>';
-  const ra = document.getElementById('ra');
-  const rc = document.getElementById('rc');
-  const rt2 = document.getElementById('rt2');
-  const rsd = document.getElementById('rsd');
-  const srEl = document.getElementById('sr');
-
-  if (!ra || !rc || !rt2 || !rsd) {
-    alert('UI Error — กรุณา reload หน้าแล้วลองใหม่');
-    btn.disabled = false;
-    btn.innerHTML = '<span class="ico"><svg width="14" height="14"><use href="#ic-analyze"/></svg></span> วิเคราะห์ด้วย AI';
-    return;
-  }
-
-  ra.style.display = 'block';
-  rt2.textContent = 'กำลังวิเคราะห์...';
-  rsd.className = 'sd th';
-  rc.innerHTML = '<div style="text-align:center;padding:28px;color:var(--g4)">AI กำลังอ่านภาพและนับขีด<span class="dot3"></span></div>';
-  if (srEl) srEl.style.display = 'none';
-
-  // ── เรียก Gemini API โดยตรง ──
-  const GEMINI_KEY = localStorage.getItem('orApiKey') || '';
-  if (!GEMINI_KEY) {
-    ra.style.display = 'block';
-    rc.innerHTML = `<div style="text-align:center;padding:20px 24px">
-      <div style="font-size:2rem;margin-bottom:8px">🔑</div>
-      <div style="font-weight:700;color:var(--rd);font-size:.95rem;margin-bottom:8px">กรุณาใส่ Gemini API Key ก่อน</div>
-      <div style="font-size:.83rem;color:var(--g5);margin-bottom:14px">
-        วาง key ในช่อง <b>🔑 Gemini API Key</b> ด้านบน<br>
-        รับ key ฟรีได้ที่ <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--primary)">aistudio.google.com/app/apikey</a>
-      </div>
-    </div>`;
-    rt2.textContent = 'ยังไม่มี API Key';
-    rsd.className = 'sd er';
-    btn.disabled = false;
-    btn.innerHTML = '<span class="ico"><svg width="14" height="14"><use href="#ic-analyze"/></svg></span> วิเคราะห์ด้วย AI';
-    // Highlight the key input
-    const keyInp = document.getElementById('inlineApiKey');
-    if (keyInp) { keyInp.focus(); keyInp.style.borderColor='#ef4444'; setTimeout(()=>keyInp.style.borderColor='',2000); }
-    return;
-  }
-  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`;
-
-  const PROMPT = `คุณคือผู้ช่วยระบบ Stock Card ห้องผ่าตัดตา (OR) — Bangkok Eye Hospital
-
-**หน้าที่:** อ่านรายการสินค้าและจำนวนในภาพ แล้วรายงานเฉพาะรายการที่มีจำนวนระบุเท่านั้น
-
-**กฎการอ่าน:**
-- รายการที่ช่องจำนวนว่าง = ห้ามรายงาน
-- ตัวเลขที่ถูกขีดฆ่า = ห้ามรายงาน
-- ตัวเลขล้วน เช่น 2, 4 → qty=2, qty=4
-- นิพจน์บวก เช่น 2+1 → qty=3 (รวมให้ด้วย)
-- ขีด Tally: | =1, || =2, ||| =3, |||| =4, ขีดทแยง =5
-- รหัสสินค้า มักเป็น MS####, MI####, MD####, MO####, MP####, MX####
-
-**รูปแบบการตอบ — ตอบเป็น JSON เท่านั้น ไม่มีข้อความอื่น:**
-{"items":[{"name":"ชื่อสินค้า","code":"MS1234","raw":"2+1","qty":3}]}`;
-
-  try {
-    const imgs = await Promise.all(upFiles.map(f => f2b64(f)));
-    let allItems = [];
-
-    for (const d of imgs) {
-      const body = {
-        contents: [{
-          parts: [
-            { text: PROMPT },
-            { inline_data: { mime_type: d.t, data: d.d } }
-          ]
-        }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 2000 }
-      };
-
-      const res = await fetch(GEMINI_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || data.error) {
-        const eMsg = data.error?.message || `HTTP ${res.status}`;
-        if (res.status === 429) throw new Error('__RATE_LIMIT__');
-        if (res.status === 400 && eMsg.includes('API key')) throw new Error('__AUTH__');
-        throw new Error(eMsg);
-      }
-
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      let p;
-      try {
-        const m = text.replace(/```json|```/g, '').match(/\{[\s\S]*\}/);
-        p = JSON.parse(m ? m[0] : text);
-      } catch { p = { items: [] }; }
-      allItems = [...allItems, ...(p.items || [])];
-    }
-    procResults(allItems);
-  } catch (err) {
-    console.error('AI Error:', err.message);
-    let friendlyMsg = '';
-    const m = err.message || '';
-    if (m === '__RATE_LIMIT__') {
-      friendlyMsg = `<div style="text-align:center;padding:20px 24px">
-        <div style="font-size:2rem;margin-bottom:8px">⏳</div>
-        <div style="font-weight:700;color:#b45309;font-size:.95rem;margin-bottom:8px">ใช้งาน AI เกินโควต้าชั่วคราว</div>
-        <div style="font-size:.83rem;color:var(--g5);line-height:1.6">
-          Gemini ฟรีจำกัด 15 ครั้ง/นาที<br>กรุณารอ 1 นาทีแล้วลองใหม่
-        </div>
-      </div>`;
-    } else if (m === '__AUTH__') {
-      friendlyMsg = `<div style="text-align:center;padding:20px 24px">
-        <div style="font-size:2rem;margin-bottom:8px">🔑</div>
-        <div style="font-weight:700;color:var(--rd);font-size:.95rem;margin-bottom:8px">API Key ไม่ถูกต้อง</div>
-        <div style="font-size:.83rem;color:var(--g5)">กรุณาตรวจสอบ API Key ในการตั้งค่า</div>
-      </div>`;
-    } else {
-      friendlyMsg = `<div style="text-align:center;padding:20px 24px">
-        <div style="font-size:2rem;margin-bottom:8px">❌</div>
-        <div style="font-weight:700;color:var(--rd);font-size:.95rem;margin-bottom:8px">วิเคราะห์ไม่สำเร็จ</div>
-        <div style="font-size:.8rem;color:var(--g5);word-break:break-all;max-width:500px;margin:0 auto">${m.substring(0,200)}</div>
-      </div>`;
-    }
-    rc.innerHTML = friendlyMsg;
-    rt2.textContent = 'วิเคราะห์ไม่สำเร็จ';
-    rsd.className = 'sd er';
-  }
-  btn.disabled = false;
-  btn.innerHTML = '<span class="ico"><svg width="14" height="14"><use href="#ic-analyze"/></svg></span> วิเคราะห์ด้วย AI';
-}
-
-function f2b64(f) {
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = e => { const p = e.target.result.split(','); res({t: f.type || 'image/jpeg', d: p[1]}); };
-    r.onerror = rej;
-    r.readAsDataURL(f);
-  });
-}
-
-function renderAiTable() {
-  const rc = document.getElementById('rc');
-  const rt2 = document.getElementById('rt2');
-  const rsd = document.getElementById('rsd');
-  if (!rc || !rt2 || !rsd) return;
-
-  const active = pendR.filter(r => r !== null);
-  const fo = active.filter(r => r.mType === 'found').length;
-  const gu = active.filter(r => r.mType === 'guessed').length;
-  const ms = active.filter(r => r.mType === 'missing').length;
-  rt2.textContent = `พบ ${active.length} รายการ — กรุณาตรวจสอบ`;
-  rsd.className = ms > 0 ? 'sd wn' : 'sd ok';
-
-  // build active indices map: pendR index -> display number
-  let dispNum = 0;
-  let html = `
-  <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
-    <span class="bg fo">✅ ตรง ${fo}</span>
-    <span class="bg gu">⚠️ คาดเดา ${gu}</span>
-    <span class="bg ms">❌ ไม่พบ ${ms}</span>
-    <div style="flex:1"></div>
-    <button onclick="openAddAiItem()" style="padding:4px 12px;border:1.5px solid var(--primary-l);background:var(--primary-b);color:var(--primary);border-radius:6px;cursor:pointer;font-size:.78rem;font-weight:600;font-family:'Sarabun',sans-serif;display:flex;align-items:center;gap:5px">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-      เพิ่มรายการ
-    </button>
-  </div>
-  <div class="ow"><table class="rt">
-  <thead><tr><th>#</th><th>ชื่อที่ AI อ่าน</th><th>Item No.</th><th>รายการในระบบ</th><th>สถานะ</th><th>ขีด</th><th>จำนวน</th><th style="width:36px"></th></tr></thead><tbody>`;
-
-  pendR.forEach((r, i) => {
-    if (r === null) return;
-    dispNum++;
-    const rc2 = r.mType === 'missing' ? 'nf' : r.mType === 'guessed' ? 'uc' : '';
-    const bc = r.mType === 'found' ? 'fo' : r.mType === 'guessed' ? 'gu' : 'ms';
-    const bt = r.mType === 'found' ? '✅' : r.mType === 'guessed' ? '⚠️' : '❌';
-    const cf = r.mType === 'missing'
-      ? `<input class="ci" id="ci_${i}" value="${esc(r.item_no || '')}" placeholder="รหัส" onchange="resolveAiCode(${i},this.value)">`
-      : `<span class="tm">${r.item_no || '—'}</span>`;
-    const qe = r.qty == null || r.qty === 0;
-    html += `<tr id="airow_${i}" class="${rc2}">
-      <td style="color:var(--g4);font-size:.75rem">${dispNum}</td>
-      <td style="max-width:160px;white-space:normal;font-size:.79rem">${esc(r.origName)}</td>
-      <td>${cf}</td>
-      <td style="max-width:200px;white-space:normal;font-size:.77rem" id="desc_${i}">${r.desc || '<em style="color:var(--g4)">?</em>'}</td>
-      <td><span class="bg ${bc}">${bt}</span><div style="font-size:.69rem;color:var(--g4);margin-top:1px">${r.note || ''}</div></td>
-      <td style="font-family:'IBM Plex Mono',monospace;font-size:.8rem;color:var(--g6)">${r.tallyRaw || '—'}</td>
-      <td><input class="qi ${qe ? 'em' : ''}" id="qi_${i}" type="number" min="0" value="${r.qty ?? ''}" placeholder="${qe ? '?' : ''}" oninput="pendR[${i}].qty=parseFloat(this.value)||0"></td>
-      <td><button onclick="removeAiRow(${i})" title="ลบ"
-        style="width:26px;height:26px;border-radius:50%;border:1.5px solid #fca5a5;background:#fff8f8;color:var(--danger);cursor:pointer;font-size:.8rem;display:flex;align-items:center;justify-content:center">✕</button></td>
-    </tr>`;
-  });
-  html += '</tbody></table></div>';
-
-  // Add item panel
-  html += `
-  <div id="addAiPanel" style="display:none;margin-top:12px;border:1.5px solid var(--primary-l);border-radius:8px;background:var(--primary-b);padding:12px">
-    <div style="font-weight:600;font-size:.86rem;color:var(--primary);margin-bottom:8px">เพิ่มรายการด้วยตนเอง</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px">
-      <div>
-        <label style="font-size:.76rem">ค้นหาสินค้า</label>
-        <input type="text" id="aiAddSearch" placeholder="พิมพ์รหัสหรือชื่อ..." oninput="searchAiAdd(this.value)"
-          style="width:100%;padding:6px 10px;border:1.5px solid var(--g3);border-radius:6px;font-size:.82rem">
-        <div id="aiAddRes" class="sr-list" style="display:none;margin-top:3px"></div>
-      </div>
-      <div>
-        <label style="font-size:.76rem">จำนวน</label>
-        <input type="number" id="aiAddQty" min="1" value="1"
-          style="width:100%;padding:6px 10px;border:1.5px solid var(--g3);border-radius:6px;font-size:.82rem;text-align:center">
-      </div>
-      <button onclick="confirmAddAiItem()" style="padding:7px 14px;background:var(--primary);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.82rem;font-family:'Sarabun',sans-serif;font-weight:600;white-space:nowrap">+ เพิ่ม</button>
-    </div>
-    <div style="font-size:.76rem;color:var(--g4);margin-bottom:6px">หรือเลือกจาก Template อาจารย์:</div>
-    <div id="aiTplBtns" style="display:flex;flex-wrap:wrap;gap:6px"></div>
-    <div id="aiTplItemList" style="display:none;margin-top:8px"></div>
-    <div id="aiAddSelected" style="margin-top:8px;font-size:.78rem;color:var(--primary);min-height:18px"></div>
-  </div>`;
-
-  rc.innerHTML = html;
-  renderAiTplBtns();
-  const srEl2 = document.getElementById('sr');
-  if (srEl2) srEl2.style.display = active.length ? 'flex' : 'none';
-}
-
-function renderAiTplBtns() {
-  const c = document.getElementById('aiTplBtns');
-  if (!c) return;
-  c.innerHTML = doctors.map(d => `
-    <button onclick="addAiFromTpl('${d.id}')"
-      style="padding:3px 10px;border:1.5px solid var(--g3);background:#fff;border-radius:20px;cursor:pointer;font-size:.76rem;font-family:'Sarabun',sans-serif;color:var(--g7)">
-      ${esc(d.name)}${d.type ? ' · ' + esc(d.type) : ''}
-    </button>`).join('');
-}
-
-function openAddAiItem() {
-  const panel = document.getElementById('addAiPanel');
-  if (!panel) return;
-  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-  if (panel.style.display === 'block') {
-    document.getElementById('aiAddSearch').focus();
-    renderAiTplBtns();
-  }
-}
-
-let aiAddItem = null;
-function searchAiAdd(val) {
-  const res = document.getElementById('aiAddRes');
-  if (!val || val.length < 1) { res.style.display = 'none'; return; }
-  const q = val.toLowerCase();
-  const matches = ITEMS.filter(i => i.d.toLowerCase().includes(q) || i.n.toLowerCase().includes(q)).slice(0, 12);
-  if (!matches.length) { res.style.display = 'none'; return; }
-  res.style.display = 'block';
-  res.innerHTML = matches.map(i => `
-    <div class="sr-row" data-code="${esc(i.n)}" data-desc="${esc(i.d)}" onclick="selectAiAddItem(this.dataset.code,this.dataset.desc)">
-      <span class="item-no">${i.n}</span>
-      <span style="flex:1;font-size:.8rem">${esc(i.d)}</span>
-    </div>`).join('');
-}
-
-function selectAiAddItem(code, desc) {
-  aiAddItem = {n: code, d: desc};
-  document.getElementById('aiAddSearch').value = desc;
-  document.getElementById('aiAddRes').style.display = 'none';
-  const sel = document.getElementById('aiAddSelected');
-  if (sel) sel.textContent = '✓ ' + code + ' — ' + desc;
-}
-
-function confirmAddAiItem() {
-  if (!aiAddItem) { showT('กรุณาเลือกสินค้าก่อน', 'e'); return; }
-  const qty = parseFloat(document.getElementById('aiAddQty').value) || 1;
-  pendR.push({origName: aiAddItem.d, tallyRaw: '', qty, item_no: aiAddItem.n, desc: aiAddItem.d, mType: 'found', note: 'เพิ่มเอง'});
-  aiAddItem = null;
-  document.getElementById('aiAddSearch').value = '';
-  document.getElementById('aiAddQty').value = '1';
-  const sel = document.getElementById('aiAddSelected');
-  if (sel) sel.textContent = '';
-  renderAiTable();
-  showT('เพิ่มรายการแล้ว', 'ok');
-}
-
-function addAiFromTpl(docId) {
-  const doc = doctors.find(d => d.id === docId);
-  if (!doc || !doc.items?.length) { showT('Template นี้ยังไม่มีรายการ', 'e'); return; }
-
-  // highlight selected button
-  document.querySelectorAll('#aiTplBtns button').forEach(b => b.style.background = '#fff');
-  event.target.style.background = 'var(--primary-b)';
-  event.target.style.borderColor = 'var(--primary)';
-
-  const panel = document.getElementById('aiTplItemList');
-  if (!panel) return;
-
-  const alreadyIn = new Set(pendR.filter(r => r).map(r => r.item_no));
-  panel.style.display = 'block';
-  panel.innerHTML = `
-    <div style="font-size:.78rem;font-weight:600;color:var(--primary);margin-bottom:6px">${esc(doc.name)} — เลือกรายการ:</div>
-    <div style="max-height:200px;overflow-y:auto;border:1px solid var(--g3);border-radius:6px;background:#fff">
-      ${doc.items.map((item, i) => {
-        const exists = alreadyIn.has(item.n);
-        return `<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--g2);cursor:pointer;${exists ? 'opacity:.45' : ''}">
-          <input type="checkbox" value="${i}" data-docid="${docId}" ${exists ? 'disabled checked' : ''}
-            style="width:14px;height:14px;accent-color:var(--primary)">
-          <span class="item-no" style="font-size:.72rem">${esc(item.n)}</span>
-          <span style="flex:1;font-size:.8rem">${esc(item.d)}</span>
-        </label>`;
-      }).join('')}
-    </div>
-    <div style="display:flex;gap:8px;margin-top:8px">
-      <button onclick="selectAllTplItems('${docId}')" style="flex:1;padding:5px;border:1px solid var(--g3);background:#fff;border-radius:5px;cursor:pointer;font-size:.76rem;font-family:'Sarabun',sans-serif">เลือกทั้งหมด</button>
-      <button onclick="confirmAddTplItems('${docId}')" style="flex:2;padding:5px;background:var(--primary);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:.78rem;font-weight:600;font-family:'Sarabun',sans-serif">+ เพิ่มที่เลือก</button>
-    </div>
-  `;
-}
-
-function selectAllTplItems(docId) {
-  document.querySelectorAll(`#aiTplItemList input[data-docid="${docId}"]:not(:disabled)`).forEach(cb => cb.checked = true);
-}
-
-function confirmAddTplItems(docId) {
-  const doc = doctors.find(d => d.id === docId);
-  if (!doc) return;
-  let added = 0;
-  document.querySelectorAll(`#aiTplItemList input[data-docid="${docId}"]:not(:disabled):checked`).forEach(cb => {
-    const item = doc.items[parseInt(cb.value)];
-    if (!item) return;
-    pendR.push({origName: item.d, tallyRaw: '', qty: 1, item_no: item.n, desc: item.d, mType: 'found', note: 'Template ' + doc.name});
-    added++;
-  });
-  if (!added) { showT('ไม่ได้เลือกรายการ', 'e'); return; }
-  document.getElementById('aiTplItemList').style.display = 'none';
-  renderAiTable();
-  showT(`เพิ่ม ${added} รายการจาก ${doc.name} แล้ว`, 'ok');
-}
-
-function procResults(aiItems) {
-  const rc = document.getElementById('rc');
-  const rt2 = document.getElementById('rt2');
-  const rsd = document.getElementById('rsd');
-  if (!rc || !rt2 || !rsd) return;
-  const used = aiItems.filter(i =>
-    !i.strikethrough &&
-    ((i.qty != null && Number(i.qty) > 0) || (i.tally && String(i.tally).trim()))
-  );
-  if (!used.length) {
-    rc.innerHTML = '<div style="color:var(--am);padding:18px">⚠️ AI ไม่พบรายการที่มีจำนวน</div>';
-    rt2.textContent = 'ไม่พบรายการ'; rsd.className = 'sd wn'; return;
-  }
-  pendR = used.map(it => {
-    // parse qty: ใช้ raw field ถ้ามี, แล้ว evaluate expression
-    const rawStr = it.raw || it.tally || String(it.qty || '');
-    let qty = parseExpr(rawStr);
-    if (qty === null) qty = Number(it.qty) || 0;
-    const m = matchItem(it.name, it.code, qty);
-    return {origName: it.name || '', tallyRaw: rawStr, qty, item_no: m.item_no, desc: m.desc, mType: m.mType, note: m.note};
-  });
-  renderAiTable();
-}
-
-function removeAiRow(idx) {
-  pendR[idx] = null;
-  renderAiTable();
-}
-
-function resolveAiCode(idx, code) {
-  const item = ITEMS.find(i => i.n === code.trim().toUpperCase());
-  if (item) {
-    pendR[idx].item_no = item.n;
-    pendR[idx].desc = item.d;
-    pendR[idx].mType = 'found';
-    const descEl = document.getElementById('desc_' + idx);
-    if (descEl) descEl.textContent = item.d;
-    showT('✅ พบรายการ: ' + item.d, 'ok');
-  }
-}
-
-function saveAiEntries() {
-  const date = document.getElementById('aiDate').value;
-  const now = new Date().toLocaleString('th-TH');
-  const aiDocSel = document.getElementById('aiDoc').value;
-  const docName = aiDocSel ? (doctors.find(d => d.id === aiDocSel)?.name || '') : '';
-  const ne = [];
-  const batchId = 'B' + Date.now();
-
-  pendR.forEach((r, i) => {
-    if (!r) return; // ถูกลบแล้ว
-    const qEl = document.getElementById(`qi_${i}`);
-    const cEl = document.getElementById(`ci_${i}`);
-    const qty = qEl ? parseFloat(qEl.value) : r.qty;
-    if (!qty && qty !== 0) return;
-    ne.push({
-      id: Date.now() + i,
-      batchId,
-      date, type: aiType,
-      item_no: cEl ? cEl.value : (r.item_no || ''),
-      desc: r.desc || r.origName,
-      origName: r.origName,
-      qty: qty || 0,
-      tally: r.tallyRaw || '',
-      mType: r.mType,
-      note: docName,
-      savedAt: now
-    });
-  });
-
-  if (!ne.length) { showT('ไม่มีรายการ', 'e'); return; }
-  saved = [...saved, ...ne];
-  localStorage.setItem('orSE', JSON.stringify(saved));
-  if (window._fbWrite) window._fbWrite('orSE', saved);
-  showT(`✅ บันทึก ${ne.length} รายการแล้ว`, 'ok');
-  gdAutoSaveIfEnabled();
-  updSum();
-  clearRes();
-}
-
-function clearRes() { pendR = []; document.getElementById('ra').style.display = 'none'; }
-function clearAll() {
-  upFiles = [];
-  renderFilePreview();
-  document.getElementById('btnA').disabled = true;
-  clearRes();
-}
-
 /* ══════════════════════════════════════════
    TEMPLATE / DOCTORS
 ══════════════════════════════════════════ */
@@ -6704,9 +5994,12 @@ function updateDocSelects() {
   // Rebuild template list for current cat
   onTplCatChange(prevCat, true);
 
-  const aiOpts = '<option value="">— ไม่ระบุ —</option>' +
-    doctors.map(d => `<option value="${d.id}">${esc(d.name)}</option>`).join('');
-  document.getElementById('aiDoc').innerHTML = aiOpts;
+  const aiDocEl = document.getElementById('aiDoc');
+  if (aiDocEl) {
+    const aiOpts = '<option value="">— ไม่ระบุ —</option>' +
+      doctors.map(d => `<option value="${d.id}">${esc(d.name)}</option>`).join('');
+    aiDocEl.innerHTML = aiOpts;
+  }
 }
 
 function onTplCatChange(cat, keepVal) {
@@ -6937,7 +6230,8 @@ function rItems() {
   const uom    = document.getElementById('itmUom')?.value   || '';
   const prefix = document.getElementById('itmPrefix')?.value || '';
 
-  document.getElementById('nc-total').textContent = ITEMS.length;
+  const ncTotal = document.getElementById('nc-total');
+  if (ncTotal) ncTotal.textContent = ITEMS.length;
 
   let rows = ITEMS.slice();
   if (q)      rows = rows.filter(i => i.n.toLowerCase().includes(q) || i.d.toLowerCase().includes(q));
@@ -6964,6 +6258,7 @@ function rItems() {
 function renderItemsAll(items) {
   const tb = document.getElementById('itm-tb');
   const em = document.getElementById('itm-empty');
+  if (!tb || !em) return; // tab Items ยังไม่ได้เปิด
   if (!items || !items.length) { tb.innerHTML = ''; em.style.display = ''; return; }
   em.style.display = 'none';
 
@@ -7187,8 +6482,6 @@ function rHistDay() {
               onchange="updateCaseLabel('${safeKey}',this.value)">
           </div>
           <button onclick="event.stopPropagation();openAddEntryToBatch('${safeKey}','${esc(g.date)}','${esc(g.type)}')" style="padding:2px 9px;border:1.5px solid var(--primary);background:#fff;color:var(--primary);border-radius:5px;cursor:pointer;font-size:.73rem;font-weight:600;font-family:'Sarabun',sans-serif">+ เพิ่ม</button>
-          <button onclick="event.stopPropagation();openBatchAttach('${safeKey}')" style="padding:2px 9px;border:1.5px solid var(--accent);background:#fff;color:var(--accent);border-radius:5px;cursor:pointer;font-size:.73rem;font-weight:600;font-family:'Sarabun',sans-serif">📎 แนบ${g.attachments&&g.attachments.length?` (${g.attachments.length})`:''}
-          </button>
           <button onclick="event.stopPropagation();openSaveAsTemplate('batch','${safeKey}')" style="padding:2px 9px;border:1.5px solid var(--success);background:#f0fdf4;color:var(--success);border-radius:5px;cursor:pointer;font-size:.73rem;font-weight:600;font-family:'Sarabun',sans-serif">📋 แบบ</button>
           <button onclick="event.stopPropagation();deleteBatch('${safeKey}')" style="padding:2px 9px;border:1.5px solid #fca5a5;background:#fff8f8;color:var(--danger);border-radius:5px;cursor:pointer;font-size:.73rem;font-weight:600;font-family:'Sarabun',sans-serif">ลบ</button>
           <span class="batch-arrow" style="font-size:.82rem;color:var(--g4)">▼</span>
@@ -7584,13 +6877,18 @@ function _reloadAppData() {
 window._reloadAppData = _reloadAppData;
 
 function updSum() {
-  document.getElementById('sTotal').textContent = ITEMS.length;
-  document.getElementById('sTx').textContent = saved.length;
-  document.getElementById('sTpl').textContent = doctors.length;
-  const recv = saved.filter(s => s.type === 'receive').reduce((a, s) => a + (s.qty || 0), 0);
+  const sTotal = document.getElementById('sTotal');
+  const sTx    = document.getElementById('sTx');
+  const sTpl   = document.getElementById('sTpl');
+  const sRecv  = document.getElementById('sRecv');
+  const sIssue = document.getElementById('sIssue');
+  if (sTotal) sTotal.textContent = ITEMS.length;
+  if (sTx)    sTx.textContent    = saved.length;
+  if (sTpl)   sTpl.textContent   = doctors.length;
+  const recv  = saved.filter(s => s.type === 'receive').reduce((a, s) => a + (s.qty || 0), 0);
   const issue = saved.filter(s => s.type === 'issue').reduce((a, s) => a + (s.qty || 0), 0);
-  document.getElementById('sRecv').textContent = recv;
-  document.getElementById('sIssue').textContent = issue;
+  if (sRecv)  sRecv.textContent  = recv;
+  if (sIssue) sIssue.textContent = issue;
 }
 
 /* ══════════════════════════════════════════
@@ -7615,25 +6913,6 @@ setTimeout(() => {
 /* ══════════════════════════════════════════
    TOAST
 ══════════════════════════════════════════ */
-async function testApiKey() {
-  const key = document.getElementById('apiKey').value.trim();
-  if (!key) { document.getElementById('apiKeyStatus').textContent = '❌ กรุณาใส่ API Key ก่อน'; return; }
-  document.getElementById('apiKeyStatus').textContent = '⏳ กำลังทดสอบ...';
-  try {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({contents:[{parts:[{text:'hi'}]}]})
-    });
-    const d = await r.json();
-    if (d.error) throw new Error(d.error.message);
-    localStorage.setItem('orApiKey', key);
-    document.getElementById('apiKeyStatus').innerHTML = '<span style="color:var(--gd)">✅ Gemini API Key ใช้งานได้ — บันทึกแล้ว</span>';
-  } catch(e) {
-    const msg = e.message.includes('Failed to fetch') ? '❌ ไม่สามารถเชื่อมต่อ Gemini API ได้' : '❌ ' + e.message;
-    document.getElementById('apiKeyStatus').innerHTML = '<span style="color:var(--rd)">' + msg + '</span>';
-  }
-}
 
 function showT(msg, t = '') {
   const el = document.getElementById('toast');
@@ -7668,44 +6947,6 @@ const GD = {
 };
 
 /* ── Init ─────────────────────────────────── */
-/* ── Presence helpers ───────────────────────── */
-window._renderPresence = function(users) {
-  // Badge
-  const badge = document.getElementById('presenceBadge');
-  const count = document.getElementById('presenceCount');
-  if (badge) {
-    // badge always visible in row2 — just update count
-    badge.style.display = 'flex';
-    if (count) count.textContent = users.length;
-  }
-
-  // Modal list
-  const list = document.getElementById('presenceList');
-  if (!list) return;
-  if (users.length === 0) {
-    list.innerHTML = '<div style="color:var(--g4);font-size:.84rem;text-align:center;padding:12px">ไม่มีผู้ใช้งานออนไลน์</div>';
-    return;
-  }
-  list.innerHTML = users.map(u => {
-    const ts = u.lastSeen?.toDate ? u.lastSeen.toDate() : new Date();
-    const timeStr = ts.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
-    const isMe = window._fbMyUid && u.uid === window._fbMyUid;
-    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:${isMe ? 'var(--primary-b)' : 'var(--g1)'};border-radius:8px;border:1px solid ${isMe ? 'var(--primary-l)' : 'var(--g3)'}">
-      <span style="width:9px;height:9px;border-radius:50%;background:#22c55e;flex-shrink:0"></span>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:.83rem;font-weight:600;color:var(--g8)">${u.device || '🖥️ อุปกรณ์'}${isMe ? ' <span style="font-size:.72rem;color:var(--primary);font-weight:400">(คุณ)</span>' : ''}</div>
-        <div style="font-size:.72rem;color:var(--g4)">เข้าใช้ล่าสุด ${timeStr} น.</div>
-      </div>
-    </div>`;
-  }).join('');
-};
-
-function openPresenceModal() {
-  const users = window._presenceUsers || [];
-  window._renderPresence(users);
-  document.getElementById('modalPresence')?.classList.add('open');
-}
-
 function gdInit() {
   // ล้าง localStorage เก่าทั้งหมด (token/fileId เก่าไม่ใช้แล้ว)
   try {
@@ -7714,9 +6955,6 @@ function gdInit() {
   const ts = localStorage.getItem('orGDLastSync');
   gdSetLastSync(ts || null);
   gdUpdateUI(true); // Apps Script ไม่ต้อง auth — connected เสมอ
-  // presence badge always visible in row2
-  const count = document.getElementById('presenceCount');
-  if (count) count.textContent = '1';
 }
 
 function gdSilentAuth()    { /* ไม่ใช้แล้ว */ }
@@ -7781,34 +7019,34 @@ async function gdSaveNow(silent = false) {
     // แปลงเป็น base64 แล้วส่งผ่าน Apps Script
     const b64 = btoa(unescape(encodeURIComponent(payload)));
 
-    const resp = await fetch(GD.SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action:   'backup',
-        data:     b64,
-        mimeType: 'application/json',
-        filename: GD.FILE_NAME,
-        folderId: GD.FOLDER_ID,
-      }),
+    // ใช้ no-cors mode เพื่อหลีกเลี่ยง CORS preflight จาก github.io
+    // Apps Script รับ POST แบบ form-data ได้ใน no-cors mode
+    const formBody = new URLSearchParams({
+      action:   'backup',
+      data:     b64,
+      mimeType: 'application/json',
+      filename: GD.FILE_NAME,
+      folderId: GD.FOLDER_ID,
     });
 
-    const result = await resp.json();
-    if (result.error) throw new Error(result.error);
+    await fetch(GD.SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',   // ✅ แก้ CORS: ไม่รอ CORS headers จาก Apps Script
+      body: formBody,
+    });
 
-    // เซฟ fileId ใหม่ถ้ามี (สำหรับ overwrite รอบหน้า)
-    if (result.id) {
-      GD.fileId = result.id;
-      try { localStorage.setItem('orGDFileId', result.id); } catch(e) {}
-    }
-
+    // no-cors → response type = 'opaque' ไม่สามารถอ่าน body ได้
+    // แต่ถ้า fetch ไม่ throw = ส่งถึง Apps Script แล้ว
     const ts = new Date().toISOString();
     localStorage.setItem('orGDLastSync', ts);
     gdSetLastSync(ts);
     if (!silent) showT('✅ Backup ไป Google Drive แล้ว', 'ok');
   } catch(e) {
     console.error('GDrive save error:', e);
-    if (!silent) showT('❌ Backup ไม่สำเร็จ: ' + e.message, 'e');
+    const msg = e.message && e.message.includes('fetch')
+      ? 'ตรวจสอบการเชื่อมต่ออินเทอร์เน็ต'
+      : e.message;
+    if (!silent) showT('❌ Backup ไม่สำเร็จ: ' + msg, 'e');
   } finally {
     GD.syncing = false;
     gdUpdateUI();
@@ -7823,8 +7061,9 @@ async function gdLoadLatest(silent = false) {
   if (!silent) showT('กำลังโหลดข้อมูลจาก Google Drive...', '');
 
   try {
-    // ดึงไฟล์ล่าสุดจาก folder ผ่าน Apps Script
+    // ดึงไฟล์ล่าสุดจาก folder ผ่าน Apps Script (GET ต้องการ CORS จาก Apps Script)
     const resp = await fetch(GD.SCRIPT_URL + '?action=restore&folderId=' + GD.FOLDER_ID + '&filename=' + encodeURIComponent(GD.FILE_NAME));
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const result = await resp.json();
     if (result.error) throw new Error(result.error);
     if (!result.data) throw new Error('ไม่พบไฟล์ Backup ใน Drive');
@@ -7852,7 +7091,11 @@ async function gdLoadLatest(silent = false) {
     gdApplyRestore(data, true);
   } catch(e) {
     console.error('GDrive load error:', e);
-    if (!silent) showT('❌ Restore ไม่สำเร็จ: ' + e.message, 'e');
+    const isCors = e.message === 'Failed to fetch' || e.message.includes('NetworkError');
+    const msg = isCors
+      ? 'Apps Script ยังไม่ได้ตั้งค่า CORS — เปิด Script แล้ว Deploy ใหม่ด้วย "Execute as: Me, Access: Anyone"'
+      : e.message;
+    if (!silent) showT('❌ Restore ไม่สำเร็จ: ' + msg, 'e');
   } finally {
     GD.syncing = false;
     gdUpdateUI();
@@ -8204,199 +7447,6 @@ function applyMinMaxUpdates() {
     saveItems();
     console.log('[MinMax] อัปเดต', updated, 'fields ใน ITEMS แล้ว');
   }
-}
-
-
-/* ══════════════════════════════════════════
-   FILE ATTACHMENT — Apps Script Upload
-══════════════════════════════════════════ */
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzxyZ0k8_HF1RDRXkUmnxLpazVBZr6X45ac62Ke74891z6pjKYgNTkoH7NRyQFOYe4b/exec';
-const DRIVE_FOLDER_ID = '1I3aRwLH5_e3rh4tevUCVCssFMPjOpW_u';
-
-let _attachBatchKey = null;  // current batch being attached to
-let _entryPendingFiles = []; // files pending upload when saving entry
-
-// ── Entry Form: files selected ──
-function entryFilesSelected(files) {
-  _entryPendingFiles = Array.from(files);
-  const status = document.getElementById('entryFileStatus');
-  const preview = document.getElementById('entryFilePreview');
-  if (!files.length) { status.textContent = 'ยังไม่ได้เลือกไฟล์'; preview.innerHTML=''; return; }
-  status.textContent = `เลือกแล้ว ${files.length} ไฟล์ (จะอัปโหลดเมื่อกดบันทึก)`;
-  preview.innerHTML = Array.from(files).map(f => {
-    const isImg = f.type.startsWith('image/');
-    const icon = isImg ? '🖼️' : f.name.endsWith('.pdf') ? '📄' : '📁';
-    return `<span style="background:var(--primary-b);border:1px solid var(--primary-l);border-radius:5px;padding:3px 8px;font-size:.73rem;color:var(--primary)">${icon} ${f.name}</span>`;
-  }).join('');
-}
-
-// ── Upload single file to Apps Script ──
-async function uploadFileToGDrive(file, filename) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const base64 = e.target.result.split(',')[1];
-      try {
-        const res = await fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            filename: filename || file.name,
-            mimeType: file.type || 'application/octet-stream',
-            data: base64,
-            folderId: DRIVE_FOLDER_ID
-          })
-        });
-        const json = await res.json();
-        if (json.fileUrl || json.url || json.id) {
-          resolve({
-            name: file.name,
-            url: json.fileUrl || json.url || `https://drive.google.com/file/d/${json.id}/view`,
-            id: json.id || '',
-            type: file.type
-          });
-        } else {
-          reject(new Error(json.error || 'Upload failed'));
-        }
-      } catch(err) { reject(err); }
-    };
-    reader.onerror = () => reject(new Error('อ่านไฟล์ไม่ได้'));
-    reader.readAsDataURL(file);
-  });
-}
-
-// ── Upload pending files after saveEntry ──
-async function uploadEntryFiles(batchId) {
-  if (!_entryPendingFiles.length) return;
-  const files = _entryPendingFiles.slice();
-  _entryPendingFiles = [];
-  document.getElementById('entryFileStatus').textContent = `กำลังอัปโหลด ${files.length} ไฟล์...`;
-  try {
-    const uploaded = [];
-    for (let i=0; i<files.length; i++) {
-      const ts = Date.now();
-      const fname = `${batchId}_${ts}_${files[i].name}`;
-      showT(`อัปโหลด ${i+1}/${files.length}: ${files[i].name}`, '');
-      const result = await uploadFileToGDrive(files[i], fname);
-      uploaded.push(result);
-    }
-    // Save URLs to saved batch
-    saved = saved.map(s => {
-      if ((s.batchId || s.savedAt) === batchId) {
-        return { ...s, attachments: [...(s.attachments||[]), ...uploaded] };
-      }
-      return s;
-    });
-    localStorage.setItem('orSE', JSON.stringify(saved));
-    if (window._fbWrite) window._fbWrite('orSE', saved);
-    document.getElementById('entryFileStatus').textContent = `✅ อัปโหลด ${uploaded.length} ไฟล์แล้ว`;
-    document.getElementById('entryFilePreview').innerHTML = '';
-    showT(`✅ อัปโหลดไฟล์แนบ ${uploaded.length} ไฟล์แล้ว`, 'ok');
-  } catch(err) {
-    showT('❌ อัปโหลดไฟล์ไม่สำเร็จ: ' + err.message, 'e');
-    document.getElementById('entryFileStatus').textContent = '❌ อัปโหลดล้มเหลว';
-  }
-}
-
-// ── Batch Attach Modal ──
-let _attachCurrentFiles = [];
-function openBatchAttach(batchKey) {
-  _attachBatchKey = batchKey;
-  _attachCurrentFiles = [];
-  document.getElementById('attachProgress').style.display = 'none';
-  document.getElementById('attachProgressBar').style.width = '0%';
-  document.getElementById('attachFileInput').value = '';
-  renderAttachFileList();
-  document.getElementById('modalAttach')?.classList.add('open');
-}
-
-function renderAttachFileList() {
-  const list = document.getElementById('attachFileList');
-  if (!list) return;
-  // Get existing attachments for this batch
-  const batchItems = saved.filter(s => (s.batchId || s.savedAt) === _attachBatchKey);
-  const attachments = batchItems.length ? (batchItems[0].attachments || []) : [];
-  if (!attachments.length && !_attachCurrentFiles.length) {
-    list.innerHTML = '<div style="text-align:center;padding:16px;color:var(--g4);font-size:.82rem">ยังไม่มีไฟล์แนบ</div>';
-    return;
-  }
-  let html = '';
-  // Existing uploaded files
-  attachments.forEach((f, i) => {
-    const isImg = (f.type||'').startsWith('image/');
-    const icon = isImg ? '🖼️' : f.name?.endsWith('.pdf') ? '📄' : '📁';
-    html += `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--g1);border-radius:6px;border:1px solid var(--g3)">
-      <span style="font-size:1.1rem">${icon}</span>
-      <span style="flex:1;font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.name||'ไฟล์'}</span>
-      <a href="${f.url}" target="_blank" style="font-size:.73rem;color:var(--primary);text-decoration:none;border:1px solid var(--primary);border-radius:4px;padding:2px 7px">เปิด</a>
-      <button onclick="removeAttachment('${_attachBatchKey}',${i})" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:.85rem;padding:2px 4px">✕</button>
-    </div>`;
-  });
-  list.innerHTML = html || '<div style="text-align:center;padding:12px;color:var(--g4);font-size:.82rem">ยังไม่มีไฟล์แนบ</div>';
-}
-
-function handleAttachFiles(files) {
-  if (!files.length) return;
-  uploadAttachFiles(Array.from(files));
-}
-function handleAttachDrop(files) {
-  if (!files.length) return;
-  uploadAttachFiles(Array.from(files));
-}
-
-async function uploadAttachFiles(files) {
-  const prog = document.getElementById('attachProgress');
-  const bar  = document.getElementById('attachProgressBar');
-  const txt  = document.getElementById('attachProgressTxt');
-  prog.style.display = '';
-  const uploaded = [];
-  for (let i=0; i<files.length; i++) {
-    const pct = Math.round((i/files.length)*100);
-    bar.style.width = pct + '%';
-    txt.textContent = `กำลังอัปโหลด ${i+1}/${files.length}: ${files[i].name}`;
-    try {
-      const ts = Date.now();
-      const fname = `${_attachBatchKey}_${ts}_${files[i].name}`;
-      const result = await uploadFileToGDrive(files[i], fname);
-      uploaded.push(result);
-    } catch(err) {
-      showT('❌ ' + files[i].name + ': ' + err.message, 'e');
-    }
-  }
-  bar.style.width = '100%';
-  txt.textContent = `✅ อัปโหลดสำเร็จ ${uploaded.length}/${files.length} ไฟล์`;
-  setTimeout(() => { prog.style.display='none'; bar.style.width='0%'; }, 2000);
-
-  if (uploaded.length) {
-    saved = saved.map(s => {
-      if ((s.batchId || s.savedAt) === _attachBatchKey) {
-        return { ...s, attachments: [...(s.attachments||[]), ...uploaded] };
-      }
-      return s;
-    });
-    localStorage.setItem('orSE', JSON.stringify(saved));
-    if (window._fbWrite) window._fbWrite('orSE', saved);
-    renderAttachFileList();
-    rHistDay();
-    showT(`✅ แนบไฟล์ ${uploaded.length} ไฟล์แล้ว`, 'ok');
-  }
-  document.getElementById('attachFileInput').value = '';
-}
-
-function removeAttachment(batchKey, idx) {
-  saved = saved.map(s => {
-    if ((s.batchId || s.savedAt) === batchKey) {
-      const atts = [...(s.attachments||[])];
-      atts.splice(idx, 1);
-      return { ...s, attachments: atts };
-    }
-    return s;
-  });
-  localStorage.setItem('orSE', JSON.stringify(saved));
-  if (window._fbWrite) window._fbWrite('orSE', saved);
-  renderAttachFileList();
-  rHistDay();
-  showT('🗑️ ลบไฟล์แนบแล้ว', 'ok');
 }
 
 /* ══════════════════════════════════════════
@@ -8821,38 +7871,6 @@ function confirmSaveAsTemplate() {
 </div>
 
 
-<!-- MODAL: แนบไฟล์ (Batch) -->
-<div class="modal-bg" id="modalAttach" style="z-index:2500">
-  <div class="modal" style="width:min(520px,95vw)">
-    <div class="mh">
-      <span class="mt">📎 แนบไฟล์</span>
-      <span class="mc" onclick="closeModal('modalAttach')">✕</span>
-    </div>
-    <div class="mb2">
-      <div style="border:2px dashed var(--g3);border-radius:var(--r);padding:18px;text-align:center;background:var(--g1);margin-bottom:12px;cursor:pointer;position:relative"
-        ondragover="event.preventDefault();this.style.borderColor='var(--primary-l)'"
-        ondragleave="this.style.borderColor='var(--g3)'"
-        ondrop="event.preventDefault();this.style.borderColor='var(--g3)';handleAttachDrop(event.dataTransfer.files)">
-        <input type="file" id="attachFileInput" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
-          style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"
-          onchange="handleAttachFiles(this.files)">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--primary-l)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        <p style="font-size:.84rem;color:var(--g6)"><strong style="color:var(--primary)">คลิกเพื่อเลือกไฟล์</strong> หรือลากมาวาง</p>
-        <p style="font-size:.72rem;color:var(--g4);margin-top:4px">รองรับ รูปภาพ, PDF, Word, Excel</p>
-      </div>
-      <div id="attachProgress" style="display:none;margin-bottom:10px">
-        <div style="background:var(--g2);border-radius:20px;height:8px;overflow:hidden">
-          <div id="attachProgressBar" style="height:100%;background:var(--primary);width:0%;transition:width .3s;border-radius:20px"></div>
-        </div>
-        <div id="attachProgressTxt" style="font-size:.74rem;color:var(--g6);margin-top:4px;text-align:center"></div>
-      </div>
-      <div id="attachFileList" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto"></div>
-    </div>
-    <div class="mf">
-      <button class="btn bs" onclick="closeModal('modalAttach')">ปิด</button>
-    </div>
-  </div>
-</div>
 
 <div class="modal-bg" id="modalChangePin" style="z-index:100000">
   <div class="modal" style="width:340px">

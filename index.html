@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stock Card OR</title>
+<title>Stock Card OR — ห้องผ่าตัด v4</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://apis.google.com/js/api.js" async defer></script>
@@ -1256,9 +1256,10 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
             <tr>
               <th style="width:34px">#</th>
               <th style="width:88px;cursor:pointer" onclick="sortItems('n')" title="เรียงตาม Code">Code <span id="sort-n"></span></th>
-              <th style="min-width:280px;cursor:pointer" onclick="sortItems('d')" title="เรียงตามชื่อ">ชื่อรายการ <span id="sort-d"></span></th>
+              <th style="min-width:260px;cursor:pointer" onclick="sortItems('d')" title="เรียงตามชื่อ">ชื่อรายการ <span id="sort-d"></span></th>
               <th style="width:72px;text-align:center">UOM</th>
-              <th style="width:58px;text-align:center;cursor:pointer" onclick="sortItems('bal')" title="เรียงตามคงเหลือ">คงเหลือ <span id="sort-bal"></span></th>
+              <th style="width:62px;text-align:center;cursor:pointer" onclick="sortItems('bal')" title="ยอดยกมา = bal ที่ตั้งต้น + ประวัติก่อนเดือนนี้">ยอดยกมา <span id="sort-bal"></span></th>
+              <th style="width:68px;text-align:center" title="ยอดคงเหลือ = ยอดยกมา + รับเดือนนี้ − จ่ายเดือนนี้">ยอดคงเหลือ</th>
               <th style="width:44px;text-align:center">MIN</th>
               <th style="width:44px;text-align:center">MAX</th>
               <th style="width:62px;text-align:center">จัดการ</th>
@@ -6267,16 +6268,46 @@ function renderItemsAll(items) {
   if (!items || !items.length) { tb.innerHTML = ''; em.style.display = ''; return; }
   em.style.display = 'none';
 
+
+  // ── คำนวณยอดยกมาและคงเหลือจริงจาก saved ──
+  const now = new Date();
+  const curYYYYMM = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+
+  // carryMap = ยอดสะสมทั้งหมดก่อนเดือนปัจจุบัน
+  const carryMap = {};
+  // thisMonthMap = ยอดรับ-จ่ายเดือนนี้
+  const thisMonthMap = {};
+  saved.forEach(s => {
+    if (!s.date || !s.item_no) return;
+    const no = (s.item_no||'').trim().toUpperCase();
+    const ym = s.date.substring(0,7);
+    const qty = s.qty || 0;
+    if (ym < curYYYYMM) {
+      if (!carryMap[no]) carryMap[no] = 0;
+      carryMap[no] += s.type === 'receive' ? qty : -qty;
+    } else if (ym === curYYYYMM) {
+      if (!thisMonthMap[no]) thisMonthMap[no] = {recv:0, issue:0};
+      if (s.type === 'receive') thisMonthMap[no].recv += qty;
+      else thisMonthMap[no].issue += qty;
+    }
+  });
+
   let h = '';
   items.forEach((item, idx) => {
-    const bal    = item.bal != null ? Number(item.bal) : 0;
+    const no      = (item.n||'').trim().toUpperCase();
+    const baseBal = (item.bal != null && item.bal !== '') ? Number(item.bal) : 0;
+    const carry   = carryMap[no] || 0;
+    const yodYokMa = baseBal + carry;  // ยอดยกมา
+
+    const tm     = thisMonthMap[no] || {recv:0, issue:0};
+    const actual = yodYokMa + tm.recv - tm.issue;  // คงเหลือจริง
+
     const minV   = item.min != null && item.min !== '' ? Number(item.min) : null;
-    const balCls = bal <= 0 ? 'color:#b91c1c;font-weight:700'
-                 : (minV !== null && bal <= minV ? 'color:#b45309;font-weight:600' : 'color:#166534');
+    const balCls = yodYokMa <= 0 ? 'color:#94a3b8' : (minV !== null && yodYokMa <= minV ? 'color:#b45309;font-weight:600' : 'color:#475569');
+    const actCls = 'color:var(--g8);font-weight:600';
     const code   = item.n.replace(/'/g, "\\'");
     const rowBg  = idx % 2 === 0 ? '' : 'background:#f9fafb';
 
-    // UOM chip color
     const uomColors = {
       BOTTLE:'#dbeafe;color:#1d4ed8', PIECE:'#f0fdf4;color:#166534',
       AMPOULE:'#fef3c7;color:#92400e', VIAL:'#fce7f3;color:#9d174d',
@@ -6286,24 +6317,26 @@ function renderItemsAll(items) {
     };
     const uomKey = (item.uom||'').toUpperCase();
     const uomStyle = uomColors[uomKey] ? `background:#${uomColors[uomKey]}` : 'background:#f1f5f9;color:#64748b';
+    const tmTip = (tm.recv||tm.issue) ? `ยกมา:${yodYokMa} รับ:+${tm.recv} จ่าย:-${tm.issue}` : `ยกมา:${yodYokMa} ยังไม่มีรายการเดือนนี้`;
 
     h += `<tr style="${rowBg}">
       <td style="color:var(--g4);font-size:.72rem">${idx+1}</td>
       <td>
         <span onclick='openEditItem("${code}")' title="แก้ไข"
-          style="font-family:monospace;font-size:.77rem;font-weight:700;color:var(--pr);cursor:pointer;padding:2px 5px;border-radius:3px"
+          style="font-family:monospace;font-size:.77rem;font-weight:700;color:var(--primary);cursor:pointer;padding:2px 5px;border-radius:3px"
           onmouseover="this.style.background='var(--primary-b)'" onmouseout="this.style.background=''">${esc(item.n)}</span>
       </td>
       <td style="font-size:.79rem">${esc(item.d)}</td>
       <td style="text-align:center">
         <span style="padding:1px 6px;border-radius:10px;font-size:.68rem;font-weight:600;${uomStyle}">${esc(item.uom||'—')}</span>
       </td>
-      <td style="text-align:center;${balCls}">${bal}</td>
+      <td style="text-align:center;font-size:.82rem;${balCls}" title="ตั้งต้น(${baseBal})+ก่อนเดือนนี้(${carry})">${yodYokMa}</td>
+      <td style="text-align:center;font-size:.85rem;border-radius:4px;${actCls}" title="${tmTip}">${actual}</td>
       <td style="text-align:center;color:var(--g5);font-size:.75rem">${minV !== null ? minV : '—'}</td>
       <td style="text-align:center;color:var(--g5);font-size:.75rem">${item.max != null && item.max !== '' ? Number(item.max) : '—'}</td>
       <td style="text-align:center;white-space:nowrap">
         <button onclick='openEditItem("${code}")' title="แก้ไข"
-          style="background:none;border:none;cursor:pointer;padding:3px 5px;color:var(--pr);border-radius:4px"
+          style="background:none;border:none;cursor:pointer;padding:3px 5px;color:var(--primary);border-radius:4px"
           onmouseover="this.style.background='var(--primary-b)'" onmouseout="this.style.background='none'">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>

@@ -1294,7 +1294,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
         <label>ชื่อรายการ (Stock Card) *</label>
         <input type="text" id="eiDesc" placeholder="ชื่อสินค้าตาม Stock Card">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px">
         <div>
           <label>MIN</label>
           <input type="number" id="eiMin" placeholder="0" min="0" style="width:100%">
@@ -1304,8 +1304,12 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
           <input type="number" id="eiMax" placeholder="0" min="0" style="width:100%">
         </div>
         <div>
-          <label>คงเหลือ</label>
-          <input type="number" id="eiBal" placeholder="0" min="0" style="width:100%;border-color:var(--info)" title="ยอดคงเหลือปัจจุบัน">
+          <label>ยอดยกมา</label>
+          <input type="number" id="eiCarry" placeholder="0" style="width:100%;border-color:var(--primary-l)" title="ยอดยกมาตั้งต้น (ก่อนเริ่มบันทึกในระบบ)">
+        </div>
+        <div>
+          <label>ยอดคงเหลือ</label>
+          <input type="number" id="eiBal" placeholder="0" min="0" style="width:100%;background:var(--g2);color:var(--g4)" readonly title="คำนวณอัตโนมัติ = ยอดยกมา + ประวัติรับ/จ่าย">
         </div>
       </div>
       <div id="eiWarn" style="font-size:.78rem;color:#b91c1c;background:#fef2f2;padding:8px 10px;border-radius:6px;display:none;margin-top:10px"></div>
@@ -6125,10 +6129,22 @@ let _editItemCode = null;
 function openAddItem() {
   _editItemCode = null;
   document.getElementById('editItemTitle').textContent = 'เพิ่มรายการใหม่';
-  ['eiCode','eiDesc','eiUom','eiMin','eiMax','eiBal'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  ['eiCode','eiDesc','eiUom','eiMin','eiMax','eiCarry'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('eiBal').value = '0';
   document.getElementById('eiCode').readOnly = false;
   document.getElementById('eiWarn').style.display = 'none';
   document.getElementById('modalEditItem')?.classList.add('open');
+}
+
+function _calcDisplayBal(code, carry) {
+  // คำนวณยอดคงเหลือ = ยอดยกมา + ประวัติทั้งหมด
+  const no = (code||'').trim().toUpperCase();
+  let net = carry || 0;
+  saved.forEach(s => {
+    if ((s.item_no||'').trim().toUpperCase() !== no) return;
+    net += s.type === 'receive' ? (s.qty||0) : -(s.qty||0);
+  });
+  return net;
 }
 
 function openEditItem(code) {
@@ -6136,14 +6152,21 @@ function openEditItem(code) {
   const it = ITEMS.find(i => i.n === code);
   if (!it) return;
   document.getElementById('editItemTitle').textContent = 'แก้ไข — ' + code;
-  document.getElementById('eiCode').value = it.n;
-  document.getElementById('eiDesc').value = it.d;
-  document.getElementById('eiUom').value  = it.uom || '';
-  document.getElementById('eiMin').value  = it.min != null ? it.min : '';
-  document.getElementById('eiMax').value  = it.max != null ? it.max : '';
-  document.getElementById('eiBal').value  = it.bal != null ? it.bal : 0;
+  document.getElementById('eiCode').value  = it.n;
+  document.getElementById('eiDesc').value  = it.d;
+  document.getElementById('eiUom').value   = it.uom || '';
+  document.getElementById('eiMin').value   = it.min != null ? it.min : '';
+  document.getElementById('eiMax').value   = it.max != null ? it.max : '';
+  const carry = it.bal != null ? Number(it.bal) : 0;
+  document.getElementById('eiCarry').value = carry;
+  document.getElementById('eiBal').value   = _calcDisplayBal(code, carry);
   document.getElementById('eiCode').readOnly = false;
   document.getElementById('eiWarn').style.display = 'none';
+  // อัปเดต eiBal เมื่อแก้ eiCarry
+  document.getElementById('eiCarry').oninput = function() {
+    const c = parseFloat(this.value) || 0;
+    document.getElementById('eiBal').value = _calcDisplayBal(code, c);
+  };
   document.getElementById('modalEditItem')?.classList.add('open');
 }
 
@@ -6159,8 +6182,8 @@ function saveEditItem() {
   const uom  = document.getElementById('eiUom').value.trim();
   const min  = parseFloat(document.getElementById('eiMin').value) || 0;
   const max  = parseFloat(document.getElementById('eiMax').value) || 0;
-  const bal  = parseFloat(document.getElementById('eiBal').value);
-  const newBal = isNaN(bal) ? null : bal;
+  const carryVal = parseFloat(document.getElementById('eiCarry').value);
+  const newBal = isNaN(carryVal) ? 0 : carryVal;  // bal = ยอดยกมาตั้งต้น
   const warn = document.getElementById('eiWarn');
   warn.style.display = 'none';
 
@@ -6171,7 +6194,7 @@ function saveEditItem() {
     // New
     const dup = ITEMS.find(i => i.n === code);
     if (dup) { warn.style.display=''; warn.textContent='รหัส '+code+' มีอยู่แล้ว: "'+dup.d+'"'; return; }
-    ITEMS.push({n:code, d:desc, bal: newBal !== null ? newBal : 0, uom, min, max, price:0});
+    ITEMS.push({n:code, d:desc, bal: newBal, uom, min, max, price:0});
     showT('เพิ่มรายการ '+code+' แล้ว', 'ok');
   } else {
     // Edit
@@ -6185,7 +6208,7 @@ function saveEditItem() {
       localStorage.setItem('orSE', JSON.stringify(saved));
       if (window._fbWrite) window._fbWrite('orSE', saved);
     }
-    ITEMS[idx] = {...ITEMS[idx], n:code, d:desc, uom, min, max, ...(newBal !== null ? {bal: newBal} : {})};
+    ITEMS[idx] = {...ITEMS[idx], n:code, d:desc, uom, min, max, bal: newBal};
     showT('แก้ไข '+code+' แล้ว', 'ok');
   }
   // Rebuild search index + sync (saveItems ทำ localStorage + Firebase ในที่เดียว)

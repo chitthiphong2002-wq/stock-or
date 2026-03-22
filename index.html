@@ -636,7 +636,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
 
       // ── Initial load: Firebase → localStorage → app ──
       const KEYS = ['orSE','orDocs','orItems','orCatOrder','orCatC','orCustomCats','orItemMarks','orPrefixHues','orDoneDays'];
-      const STR_KEYS = ['orPinHash']; // เก็บเป็น raw string ไม่ JSON.stringify
+      const STR_KEYS = ['orPinHash','orMasterPinHash'];
       let needReload = false;
       for (const k of KEYS) {
         const fbVal = await window._fbRead(k);
@@ -726,6 +726,29 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
         if (localStorage.getItem('orDoneDays') !== remote) {
           localStorage.setItem('orDoneDays', remote);
           try { _doneDays = val; if(typeof renderCal==='function') renderCal(); } catch(e){}
+        }
+      });
+
+      // ── Sync + Seed Master PIN hash ──
+      window._fbRead(MASTER_KEY).then(val => {
+        if (val && typeof val === 'string') {
+          // มีอยู่ใน Firebase แล้ว → sync มาเก็บใน localStorage
+          localStorage.setItem(MASTER_KEY, val);
+        } else {
+          // ยังไม่มี → seed ค่า default hash ขึ้น Firebase
+          const defaultHash = _hashPin(_MASTER_SEED);
+          localStorage.setItem(MASTER_KEY, defaultHash);
+          window._fbWrite(MASTER_KEY, defaultHash);
+        }
+      }).catch(() => {
+        // Firebase ไม่ตอบสนอง → ใช้ localStorage ไปก่อน
+        if (!localStorage.getItem(MASTER_KEY)) {
+          localStorage.setItem(MASTER_KEY, _hashPin(_MASTER_SEED));
+        }
+      });
+      window._fbListen(MASTER_KEY, val => {
+        if (val && typeof val === 'string') {
+          localStorage.setItem(MASTER_KEY, val);
         }
       });
 
@@ -6691,7 +6714,7 @@ function requireMasterPin(desc, callback) {
 function confirmMasterPin() {
   const val = document.getElementById('masterPinInput').value;
   const msg = document.getElementById('masterPinMsg');
-  if (val !== PIN_MASTER) {
+  if (_hashPin(val) !== getMasterPinHash()) {
     msg.textContent = '❌ รหัสผ่านไม่ถูกต้อง';
     document.getElementById('masterPinInput').value = '';
     return;
@@ -7569,9 +7592,25 @@ function applyMinMaxUpdates() {
 /* ══════════════════════════════════════════
    PIN SYSTEM
 ══════════════════════════════════════════ */
-const PIN_MASTER = '0612';        // hardcoded, cannot change
-const PIN_KEY     = 'orPinHash'; // user PIN stored hashed
+// ── Master PIN: ไม่ hardcode ใน source แล้ว ──
+// เก็บใน Firebase เป็น hash เท่านั้น
+// ครั้งแรกที่ใช้งาน: hash('0612') จะถูก seed เข้า Firebase อัตโนมัติ
+const _MASTER_SEED = '0612'; // ใช้แค่ครั้งแรก seed เท่านั้น — หลังจากนั้นอ่านจาก Firebase
+const PIN_KEY     = 'orPinHash';   // user PIN stored hashed
 const PIN_SESSION = 'orPinAuth';
+const MASTER_KEY  = 'orMasterPinHash'; // master PIN stored hashed in Firebase + localStorage
+
+// ── ดึง Master PIN hash (localStorage cache, sync จาก Firebase) ──
+function getMasterPinHash() {
+  let v = localStorage.getItem(MASTER_KEY);
+  if (!v) {
+    // ยังไม่มี → seed ค่า default แล้วบันทึก
+    v = _hashPin(_MASTER_SEED);
+    localStorage.setItem(MASTER_KEY, v);
+    if (window._fbWrite) window._fbWrite(MASTER_KEY, v);
+  }
+  return v;
+}
 
 function _hashPin(pin) {
   let h = 0;
@@ -7580,13 +7619,39 @@ function _hashPin(pin) {
 }
 function getStoredPin() {
   let v = localStorage.getItem(PIN_KEY) || _hashPin('1234');
-  // ✅ FIX: ถ้าเก็บมาแบบ JSON string (มี quotes) ให้ parse ออกก่อน
   if (v.startsWith('"') && v.endsWith('"')) {
     try { v = JSON.parse(v); } catch(e) {}
   }
   return v;
 }
 function isAuthenticated() { return sessionStorage.getItem(PIN_SESSION) === '1'; }
+
+/* ══════════════════════════════════════════
+   SESSION TIMEOUT — 10 นาที
+══════════════════════════════════════════ */
+const SESSION_TIMEOUT_MS = 10 * 60 * 1000; // 10 นาที
+let _sessionTimer = null;
+
+function _resetSessionTimer() {
+  clearTimeout(_sessionTimer);
+  if (!isAuthenticated()) return;
+  _sessionTimer = setTimeout(() => {
+    // Lock: ล้าง session แล้วแสดงหน้า PIN
+    sessionStorage.removeItem(PIN_SESSION);
+    pinClear();
+    document.getElementById('pinMsg').textContent = '⏱ หมดเวลา กรุณา Login ใหม่';
+    document.getElementById('pinScreen')?.classList.remove('hidden');
+    // Focus PIN field
+    setTimeout(() => document.getElementById('pinTextField')?.focus(), 200);
+  }, SESSION_TIMEOUT_MS);
+}
+
+// Reset timer เมื่อมีการโต้ตอบใดๆ
+['click','keydown','mousemove','touchstart','scroll'].forEach(ev => {
+  document.addEventListener(ev, () => {
+    if (isAuthenticated()) _resetSessionTimer();
+  }, { passive: true });
+});
 
 let _pinBuffer = '';
 let _pinAttempts = 0;
@@ -7638,16 +7703,18 @@ function updatePinDots(err) {
 }
 function checkPin() {
   const pin = _pinBuffer;
-  if (pin === PIN_MASTER || _hashPin(pin) === getStoredPin()) {
+  const pinHash = _hashPin(pin);
+  if (pinHash === getMasterPinHash() || pinHash === getStoredPin()) {
     sessionStorage.setItem(PIN_SESSION,'1');
     _pinAttempts = 0;
     document.getElementById('pinScreen')?.classList.add('hidden');
     document.getElementById('pinMsg').textContent = '';
-    // Focus app
     const tf = document.getElementById('pinTextField');
     if (tf) tf.value = '';
     _pinBuffer = '';
     updatePinDots();
+    // เริ่ม session timeout
+    _resetSessionTimer();
   } else {
     _pinAttempts++;
     updatePinDots(true);
@@ -7712,14 +7779,14 @@ function saveNewPin() {
   const confVal = document.getElementById('pinConfirm').value;
   const msg = document.getElementById('changePinMsg');
 
-  // Cannot change using master PIN — master is always 0612
-  if (oldVal === PIN_MASTER) {
+  // ไม่อนุญาตให้เปลี่ยน Master PIN ผ่านช่องนี้
+  if (_hashPin(oldVal) === getMasterPinHash()) {
     msg.textContent = '❌ ไม่สามารถเปลี่ยน Master PIN ได้'; return;
   }
   if (_hashPin(oldVal) !== getStoredPin()) {
     msg.textContent = '❌ PIN ปัจจุบันไม่ถูกต้อง'; return;
   }
-  if (newVal === PIN_MASTER) {
+  if (_hashPin(newVal) === getMasterPinHash()) {
     msg.textContent = '❌ ไม่สามารถใช้รหัสนี้ได้'; return;
   }
   if (newVal.length !== 4 || !/^\d{4}$/.test(newVal)) {
@@ -7768,6 +7835,8 @@ function saveNewPin() {
     tryFbSync(0);
   } else {
     document.getElementById('pinScreen')?.classList.add('hidden');
+    // เริ่ม session timeout สำหรับ session ที่มีอยู่แล้ว
+    _resetSessionTimer();
   }
 })();
 

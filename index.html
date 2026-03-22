@@ -635,7 +635,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
       window._fbPending = {};
 
       // ── Initial load: Firebase → localStorage → app ──
-      const KEYS = ['orSE','orDocs','orItems','orCatOrder','orCatC','orCustomCats','orItemMarks','orPrefixHues'];
+      const KEYS = ['orSE','orDocs','orItems','orCatOrder','orCatC','orCustomCats','orItemMarks','orPrefixHues','orDoneDays'];
       const STR_KEYS = ['orPinHash']; // เก็บเป็น raw string ไม่ JSON.stringify
       let needReload = false;
       for (const k of KEYS) {
@@ -716,6 +716,16 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
         const raw = typeof val === 'string' ? val : String(val);
         if (localStorage.getItem('orPinHash') !== raw) {
           localStorage.setItem('orPinHash', raw);
+        }
+      });
+
+      // ── Sync orDoneDays ──
+      window._fbListen('orDoneDays', val => {
+        if (val === null) return;
+        const remote = JSON.stringify(val);
+        if (localStorage.getItem('orDoneDays') !== remote) {
+          localStorage.setItem('orDoneDays', remote);
+          try { _doneDays = val; if(typeof renderCal==='function') renderCal(); } catch(e){}
         }
       });
 
@@ -953,19 +963,21 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
             <!-- Tab switcher -->
             <div id="tplTabBar" style="display:flex;border-bottom:2px solid var(--g3);margin-bottom:10px">
               <button id="entTabSearch" onclick="swEntTab('search')"
-                style="flex:1;padding:6px 0;border:none;background:none;cursor:pointer;font-size:.8rem;font-weight:700;font-family:'Sarabun',sans-serif;color:var(--primary);border-bottom:2px solid var(--primary);margin-bottom:-2px">
-                🔍 ค้นหารายการ
+                style="flex:1;padding:6px 0;border:none;background:none;cursor:pointer;font-size:.8rem;font-weight:700;font-family:'Sarabun',sans-serif;color:var(--primary);border-bottom:2px solid var(--primary);margin-bottom:-2px;display:flex;align-items:center;justify-content:center;gap:5px">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                ค้นหารายการ
               </button>
               <button id="entTabTpl" onclick="swEntTab('tpl')"
-                style="flex:1;padding:6px 0;border:none;background:none;cursor:pointer;font-size:.8rem;font-weight:700;font-family:'Sarabun',sans-serif;color:var(--g4);border-bottom:2px solid transparent;margin-bottom:-2px">
-                📋 จาก Template
+                style="flex:1;padding:6px 0;border:none;background:none;cursor:pointer;font-size:.8rem;font-weight:700;font-family:'Sarabun',sans-serif;color:var(--g4);border-bottom:2px solid transparent;margin-bottom:-2px;display:flex;align-items:center;justify-content:center;gap:5px">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                จาก Template
               </button>
             </div>
             <!-- Search pane -->
             <div id="entPaneSearch">
-              <input type="text" id="entSearch" placeholder="พิมพ์รหัส MS#### หรือชื่อรายการ..." oninput="searchEntry(this.value)">
+              <input type="text" id="entSearch" placeholder="" oninput="searchEntry(this.value)">
               <div id="entSearchRes" class="sr-list" style="display:none"></div>
-              <div style="margin-top:8px;font-size:.76rem;color:var(--g4)">
+              <div style="display:none;margin-top:8px;font-size:.76rem;color:var(--g4)">
                 หรือเพิ่มรายการที่ไม่อยู่ในระบบ:
                 <span style="color:var(--bl);cursor:pointer;text-decoration:underline" onclick="addCustomItem()">+ เพิ่มรายการพิเศษ</span>
               </div>
@@ -1078,7 +1090,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
             </div>
             <!-- Search pane -->
             <div id="tplPaneSearch">
-              <input type="text" id="tplSearch" placeholder="🔍 พิมพ์รหัส MS#### หรือชื่อรายการ..." oninput="searchTpl(this.value)">
+              <input type="text" id="tplSearch" placeholder="" oninput="searchTpl(this.value)">
               <div id="tplSearchRes" class="sr-list" style="display:none;margin-top:4px"></div>
               <div style="display:none;margin-top:6px;font-size:.76rem;color:var(--g4)"></div>
             </div>
@@ -1137,6 +1149,8 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             Export เดือนนี้
           </button>
+          <!-- Legend hidden -->
+          <div style="display:none"></div>
         </div>
       </div>
 
@@ -1164,6 +1178,11 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
                 Export วันนี้
               </button>
               <button class="btn bd" style="padding:4px 10px;font-size:.78rem" onclick="clrHist()">🗑 ล้างทั้งหมด</button>
+              <button id="doneDayBtn"
+                style="padding:4px 14px;font-size:.78rem;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;transition:all .18s;border:1.5px solid #e2e8f0;background:#f1f5f9;color:#475569;display:inline-flex;align-items:center;gap:5px"
+                onclick="toggleDoneDay(_selDate)">
+                เสร็จแล้ว
+              </button>
             </div>
             <div class="cb" style="padding:0">
               <div style="overflow-x:auto;max-height:62vh;overflow-y:auto">
@@ -1246,7 +1265,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
         <span style="padding:3px 10px;border-radius:20px;font-size:.74rem;font-weight:600;background:#f0fdf4;color:#166534">📦 ทั้งหมด <strong id="nc-total">0</strong> รายการ</span>
         <span style="padding:3px 10px;border-radius:20px;font-size:.74rem;background:#f8fafc;color:#475569" id="nc-showing"></span>
         <div class="sp"></div>
-        <span style="font-size:.73rem;color:var(--g4)">คลิก Code เพื่อแก้ไข</span>
+        <span style="font-size:.73rem;color:var(--g4);display:none">คลิก Code เพื่อแก้ไข</span>
       </div>
 
       <!-- table -->
@@ -4654,6 +4673,38 @@ let doctors = (() => { try { return JSON.parse(localStorage.getItem('orDocs') ||
 let entryItems = []; // {n, d, qty} for manual entry
 let editDocId = null;
 
+// ── วันที่ทำรายการเสร็จแล้ว (calendar green) ──
+let _doneDays = (() => { try { return JSON.parse(localStorage.getItem('orDoneDays') || '{}'); } catch(e){ return {}; } })();
+function saveDoneDays() {
+  localStorage.setItem('orDoneDays', JSON.stringify(_doneDays));
+  if (window._fbWrite) window._fbWrite('orDoneDays', _doneDays);
+}
+function toggleDoneDay(dateStr) {
+  if (_doneDays[dateStr]) { delete _doneDays[dateStr]; }
+  else { _doneDays[dateStr] = true; }
+  saveDoneDays();
+  renderCal();
+  const btn = document.getElementById('doneDayBtn');
+  if (btn) _renderDoneDayBtn(btn, dateStr);
+}
+function _renderDoneDayBtn(btn, dateStr) {
+  if (!dateStr) return;
+  const done = !!_doneDays[dateStr];
+  if (done) {
+    btn.innerHTML = `เสร็จแล้ว <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><polyline points="20 6 9 17 4 12"/></svg>`;
+    btn.style.background = '#dcfce7';
+    btn.style.color       = '#15803d';
+    btn.style.border      = '1.5px solid #86efac';
+    btn.style.fontWeight  = '700';
+  } else {
+    btn.innerHTML = `เสร็จแล้ว`;
+    btn.style.background = '#f1f5f9';
+    btn.style.color       = '#475569';
+    btn.style.border      = '1.5px solid #e2e8f0';
+    btn.style.fontWeight  = '600';
+  }
+}
+
 /* ── Search/Match utilities (ใช้โดย search และ item matching) ── */
 function tok(s) {
   return s.toLowerCase().replace(/[()\\/\-,.%"'\[\]]/g, ' ').split(/\s+/).filter(t => t.length > 1);
@@ -5969,8 +6020,10 @@ function deleteDoc() {
   if (!editDocId) return;
   const doc = doctors.find(d => d.id === editDocId);
   if (!doc) return;
-  document.getElementById('deleteDocName').textContent = doc.name;
-  document.getElementById('modalConfirmDeleteDoc')?.classList.add('open');
+  requireMasterPin('🔐 ยืนยันเพื่อลบ Template "' + doc.name + '"', () => {
+    document.getElementById('deleteDocName').textContent = doc.name;
+    document.getElementById('modalConfirmDeleteDoc')?.classList.add('open');
+  });
 }
 
 function deleteDocConfirmed() {
@@ -6108,12 +6161,13 @@ function openAddEntryToBatch(batchKey, date, type) {
 }
 
 function deleteBatch(batchKey) {
-  if (!confirm('ลบรายการทั้งหมดใน batch นี้?')) return;
-  saved = saved.filter(s => (s.batchId || s.savedAt) !== batchKey);
-  localStorage.setItem('orSE', JSON.stringify(saved));
-  if (window._fbWrite) window._fbWrite('orSE', saved);
-  updSum(); rHist(); rHistDay();
-  showT('🗑️ ลบ batch แล้ว', 'ok');
+  requireMasterPin('🔐 ยืนยันเพื่อลบรายการทั้งหมดใน batch นี้', () => {
+    saved = saved.filter(s => (s.batchId || s.savedAt) !== batchKey);
+    localStorage.setItem('orSE', JSON.stringify(saved));
+    if (window._fbWrite) window._fbWrite('orSE', saved);
+    updSum(); rHist(); rHistDay();
+    showT('🗑️ ลบ batch แล้ว', 'ok');
+  });
 }
 
 /* ══════════════════════════════════════════
@@ -6220,11 +6274,13 @@ function saveEditItem() {
 
 let _pendDelCode = null;
 function confirmDeleteItem(code) {
-  _pendDelCode = code;
   const it = ITEMS.find(i => i.n === code);
-  document.getElementById('delItemMsg').textContent =
-    'ลบ "'+(it ? it.d : code)+'" ('+code+') ออกจากฐานข้อมูล?';
-  document.getElementById('modalDelItem')?.classList.add('open');
+  requireMasterPin('🔐 ยืนยันเพื่อลบ "' + (it ? it.d : code) + '" (' + code + ')', () => {
+    _pendDelCode = code;
+    document.getElementById('delItemMsg').textContent =
+      'ลบ "'+(it ? it.d : code)+'" ('+code+') ออกจากฐานข้อมูล?';
+    document.getElementById('modalDelItem')?.classList.add('open');
+  });
 }
 function deleteItemConfirmed() {
   if (!_pendDelCode) return;
@@ -6437,6 +6493,7 @@ function renderCal() {
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${year}-${String(mon).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const hasRec  = hasDays.has(d);
+    const isDone  = !!_doneDays[dateStr];   // ✅ ทำเสร็จแล้ว
     const isSel   = dateStr === _selDate;
     const isToday = dateStr === todayStr;
     const isWeekend = ((startOffset + d - 1) % 7) >= 5; // Sat or Sun (Mon-based)
@@ -6444,17 +6501,20 @@ function renderCal() {
     let style = 'width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;margin:auto;font-size:.82rem;font-weight:600;transition:all .12s;position:relative;';
     if (isSel) {
       style += 'background:var(--primary);color:#fff;';
+    } else if (isDone) {
+      style += 'background:#d1fae5;color:#065f46;';  // เขียว = ทำเสร็จแล้ว
     } else if (hasRec) {
-      style += 'background:#d1fae5;color:#065f46;';
+      style += 'background:#dbeafe;color:#1e40af;';  // ฟ้า = มีรายการแต่ยังไม่ mark done
     } else if (isToday) {
       style += 'background:#fee2e2;color:#b91c1c;';
     } else {
       style += `color:${isWeekend ? '#ef4444' : 'var(--g7)'};`;
     }
 
+    const dotColor = isDone ? '#059669' : '#3b82f6';
     html += `<div style="padding:3px;text-align:center" title="${dateStr}">
-      <div style="${style}" onclick="selectCalDay('${dateStr}')" onmouseover="if(!${isSel})this.style.background='${hasRec?'#6ee7b7':'var(--g2)'}'" onmouseout="this.style.background='${isSel?'var(--primary)':hasRec?'#d1fae5':isToday?'#fee2e2':''}'">${d}
-        ${hasRec && !isSel ? '<span style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:#059669"></span>' : ''}
+      <div style="${style}" onclick="selectCalDay('${dateStr}')" onmouseover="if(!${isSel})this.style.background='${isDone?'#6ee7b7':hasRec?'#bfdbfe':'var(--g2)'}'" onmouseout="this.style.background='${isSel?'var(--primary)':isDone?'#d1fae5':hasRec?'#dbeafe':isToday?'#fee2e2':''}'">${d}
+        ${(hasRec || isDone) && !isSel ? `<span style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:${dotColor}"></span>` : ''}
       </div>
     </div>`;
   }
@@ -6479,6 +6539,10 @@ function selectCalDay(dateStr) {
     const dt = new Date(parseInt(y), parseInt(m)-1, parseInt(d));
     label.textContent = `📅 วัน${dow[dt.getDay()]}ที่ ${parseInt(d)} ${TH_MONTHS[parseInt(m)-1]} ${parseInt(y)+543}`;
   }
+
+  // Done-day toggle button (static in HTML now, just update state)
+  const btn = document.getElementById('doneDayBtn');
+  if (btn) _renderDoneDayBtn(btn, dateStr);
 }
 
 function rHistDay() {
@@ -6679,13 +6743,14 @@ function expCSV() {
   ).join('\n');
   const blob = new Blob(['\ufeff' + h + r], {type: 'text/csv;charset=utf-8;'});
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `StockCard_OR_${new Date().toISOString().split('T')[0]}.csv`;
-  a.click();
+  // ใช้ data URI หลีกเลี่ยง CSP block
+  const reader = new FileReader();
+  reader.onload = () => { a.href = reader.result; a.download = `StockCard_OR_${new Date().toISOString().split('T')[0]}.csv`; document.body.appendChild(a); a.click(); document.body.removeChild(a); };
+  reader.readAsDataURL(blob);
   showT('📥 Export CSV แล้ว', 'ok');
 }
 
-function expXLSX(dateFilter) {
+async function expXLSX(dateFilter) {
   const now = new Date();
   const monthNames = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
   const selMon  = parseInt(document.getElementById('txMon').value) || (now.getMonth() + 1);
@@ -6708,15 +6773,12 @@ function expXLSX(dateFilter) {
       if (s.type === 'receive') map[key][dayNum].recv += (s.qty||0);
       else map[key][dayNum].issue += (s.qty||0);
     };
-    // normalize: ใช้ทั้ง original case และ uppercase เพื่อ match ได้ทุก format
     const no = (s.item_no||'').trim();
     add(txByNo, no.toUpperCase());
-    if (no !== no.toUpperCase()) add(txByNo, no); // keep original too
+    if (no !== no.toUpperCase()) add(txByNo, no);
     add(txByDesc, (s.desc||s.origName||'').trim().toLowerCase());
   });
 
-  // Column helpers — exact match to template
-  // E=5(ยอดยกมา) F=6(จากคลัง) G=7(รับd1) H=8(จ่ายd1) I=9(จากคลัง) J=10(รับd2)...
   const grpC  = d => 6 + (d-1)*3;
   const recvC = d => 7 + (d-1)*3;
   const issuC = d => 8 + (d-1)*3;
@@ -6724,80 +6786,11 @@ function expXLSX(dateFilter) {
   const CV = CU+1, CW = CV+1, CX = CW+1, CY = CX+1, CZ = CY+1, DA = CZ+1, DB = DA+1;
   const cl = c => XLSX.utils.encode_col(c-1);
 
-  const WB = XLSX.utils.book_new();
-  const ws  = {};
-  const mgs = [];
-
-  // ── Plain style (Calibri 12, no fill, no border) ──
-  const F = 'Calibri';
-  const fN = {sz:12, name:F};          // normal
-  const fB = {sz:12, name:F, bold:true}; // bold (for title)
-  const aC = {horizontal:'center', vertical:'center'};
-  const aW = {horizontal:'center', vertical:'center', wrapText:true};
-  const aL = {vertical:'center'};
-
-  function sc(r, c, v, s) {
-    const a = XLSX.utils.encode_cell({r:r-1, c:c-1});
-    ws[a] = {v: (v===null||v===undefined)?'':v, t: typeof v==='number'?'n':'s'};
-    if (s) ws[a].s = s;
-  }
-  function sf(r, c, formula, s) {
-    const a = XLSX.utils.encode_cell({r:r-1, c:c-1});
-    ws[a] = {t:'n', f: formula};
-    if (s) ws[a].s = s;
-  }
-  function mg(r1,c1,r2,c2) {
-    if (r1===r2 && c1===c2) return; // skip single-cell
-    if (r1<1||c1<1||r2<r1||c2<c1) return; // invalid range
-    const key = r1+','+c1+','+r2+','+c2;
-    if (mgs._seen && mgs._seen.has(key)) return;
-    if (!mgs._seen) mgs._seen = new Set();
-    // Check overlap with existing merges
-    for (const m of mgs) {
-      if (m.s.r <= r2-1 && m.e.r >= r1-1 && m.s.c <= c2-1 && m.e.c >= c1-1) return;
-    }
-    mgs._seen.add(key);
-    mgs.push({s:{r:r1-1,c:c1-1},e:{r:r2-1,c:c2-1}});
-  }
-
-  // ── Row 1: Title (col F) ──
-  sc(1, 6, 'ใบ Stock card แผนก OR  ห้องผ่าตัด', {font:{sz:12, name:F}, alignment:aL});
-
-  // ── Row 2: Month (col D) ──
-  sc(2, 4, `เดือน  ${monthTH} ${yearTH}`, {font:fN, alignment:aL});
-
-  // ── Rows 4-5: Column headers ──
-  // Fixed cols — row4 only (ไม่ merge เพื่อหลีกเลี่ยง Excel XML error)
-  [[1,'No.'],[2,'Ref. Code'],[3,'Item No.'],[4,'Item Description'],[5,'ยอดยกมา']].forEach(([c, v]) => {
-    sc(4, c, v, {font:fB, alignment:aW});
-    sc(5, c, '',  {font:fN});
-  });
-
-  // Day headers
-  for (let d = 1; d <= D; d++) {
-    const gc = grpC(d), rc = recvC(d), ic = issuC(d);
-    // จากคลัง — row 4 only
-    sc(4, gc, 'จากคลัง', {font:fN, alignment:aW});
-    sc(5, gc, '', {font:fN});
-    // Day number — merge รับ+จ่าย in row4 only (2 cols, same row — safe)
-    sc(4, rc, d, {font:fB, alignment:aC}); mg(4,rc,4,ic);
-    // รับ / จ่าย in row5
-    sc(5, rc, 'รับ',  {font:fN, alignment:aC});
-    sc(5, ic, 'จ่าย', {font:fN, alignment:aC});
-  }
-
-  // Summary headers — row4 only
-  [[CU,'รับ'],[CV,'จ่าย'],[CW,'ยอดคงเหลือ'],[CX,'UOM'],[CY,'MIN'],[CZ,'MAX'],[DA,'Price/Unit'],[DB,'Total Price']].forEach(([c,v]) => {
-    sc(4, c, v, {font:fB, alignment:aW});
-    sc(5, c, '', {font:fN});
-  });
-
-  // ── ยอดยกมา: คำนวณจาก saved ทุกรายการก่อนเดือนนี้ ──
-  // สะสมรับ-จ่ายทุกเดือนก่อน dateStr → ยอดคงเหลือที่ยกมา
-  const carryMap = {};  // item_no → net balance from all prev months
+  // ── ยอดยกมา ──
+  const carryMap = {};
   saved.forEach(s => {
     if (!s.date || (!dateFilter && s.date.substring(0,7) >= dateStr)) return;
-    if (dateFilter && s.date >= dateFilter) return; // before selected day
+    if (dateFilter && s.date >= dateFilter) return;
     const no2 = (s.item_no||'').trim().toUpperCase();
     if (!no2) return;
     if (!carryMap[no2]) carryMap[no2] = 0;
@@ -6805,19 +6798,17 @@ function expXLSX(dateFilter) {
     else carryMap[no2] -= (s.qty||0);
   });
 
-  // ── หารายการที่อยู่ใน saved แต่ไม่มีใน ITEMS → เพิ่มต่อท้าย ──
+  // extra items
   const existingNos  = new Set(ITEMS.map(i => (i.n||'').trim().toUpperCase()).filter(Boolean));
   const existingDesc = new Set(ITEMS.map(i => (i.d||'').trim().toLowerCase()).filter(Boolean));
-  const extraItems = [];
-  const seenExtra  = new Set();
+  const extraItems = []; const seenExtra = new Set();
   saved.forEach(s => {
     const no2  = (s.item_no||'').trim().toUpperCase();
     const dsc2 = (s.desc||s.origName||'').trim().toLowerCase();
-    if (no2 && existingNos.has(no2))   return; // มี item_no ตรงกัน → ไม่เพิ่ม
-    if (no2 && !existingNos.has(no2) && no2 !== '') {
-      // มี item_no แต่ไม่อยู่ใน ITEMS → เพิ่มเป็น extra จริงๆ
-    } else if (!no2 && dsc2 && existingDesc.has(dsc2)) return; // desc ตรงกัน → ไม่เพิ่ม
-    else if (!no2 && !dsc2) return; // ไม่มีข้อมูลเลย → ข้าม
+    if (no2 && existingNos.has(no2)) return;
+    if (no2 && !existingNos.has(no2) && no2 !== '') {}
+    else if (!no2 && dsc2 && existingDesc.has(dsc2)) return;
+    else if (!no2 && !dsc2) return;
     const key = no2 || dsc2;
     if (!key || seenExtra.has(key)) return;
     seenExtra.add(key);
@@ -6825,85 +6816,136 @@ function expXLSX(dateFilter) {
   });
   const ALL_ITEMS = [...ITEMS, ...extraItems];
 
-  // ── Data rows ──
+  // ── สี ตาม template ──
+  // D9F2D0 = header light green, B3E5A1 = header green, 47D45A = day number green, CAEDFB = รับ/จ่าย blue
+  const hdrGreen1 = 'D9F2D0'; // No./Ref./Description/ยอดยกมา/จากคลัง header
+  const hdrGreen2 = 'B3E5A1'; // Item No./ยอดคงเหลือ/UOM/MIN/MAX/Price header
+  const hdrDayNum = '47D45A'; // วันที่ (number)
+  const hdrBlue   = 'CAEDFB'; // รับ/จ่าย
+
+  // border styles
+  const bdMed  = 'border-left:2px solid #000;border-right:2px solid #000;border-bottom:1px solid #000;';
+  const bdThin = 'border:1px solid #000;';
+
+  // style helpers
+  const hdrStyle = (bg, extra='') =>
+    `background:#${bg};font-weight:bold;text-align:center;vertical-align:middle;${bdThin}${extra}`;
+  const dataStyle = (left=false) =>
+    `${bdMed}text-align:${left?'left':'center'};vertical-align:middle;`;
+  const dataStyleThin = (left=false) =>
+    `${bdThin}text-align:${left?'left':'center'};vertical-align:middle;`;
+
+  let html = '<table>';
+
+  // Row 1: title
+  html += `<tr><td colspan="3"></td><td colspan="3" style="font-weight:bold;">ใบ Stock card แผนก OR  ห้องผ่าตัด</td></tr>`;
+  // Row 2: month
+  html += `<tr><td colspan="3"></td><td colspan="3">เดือน  ${monthTH} ${yearTH}</td></tr>`;
+  // Row 3: empty
+  html += `<tr></tr>`;
+
+  // Row 4: headers
+  let r4 = '';
+  r4 += `<td rowspan="2" style="${hdrStyle(hdrGreen1)}">No.</td>`;
+  r4 += `<td rowspan="2" style="${hdrStyle(hdrGreen1)}">Ref. Code</td>`;
+  r4 += `<td rowspan="2" style="${hdrStyle(hdrGreen2)}">Item No.</td>`;
+  r4 += `<td rowspan="2" style="${hdrStyle(hdrGreen1,'text-align:left;')}">Item Description</td>`;
+  r4 += `<td rowspan="2" style="${hdrStyle(hdrGreen1)}">ยอด\nยกมา</td>`;
+  for (let d = 1; d <= D; d++) {
+    r4 += `<td style="${hdrStyle(hdrGreen1)}">จาก\nคลัง</td>`;
+    r4 += `<td colspan="2" style="${hdrStyle(hdrDayNum)}">${d}</td>`;
+  }
+  r4 += `<td rowspan="2" style="${hdrStyle(hdrBlue)}">รับ</td>`;
+  r4 += `<td rowspan="2" style="${hdrStyle(hdrBlue)}">จ่าย</td>`;
+  r4 += `<td rowspan="2" style="${hdrStyle(hdrGreen2)}">ยอดคงเหลือ</td>`;
+  r4 += `<td rowspan="2" style="${hdrStyle(hdrGreen2)}">UOM</td>`;
+  r4 += `<td rowspan="2" style="${hdrStyle(hdrGreen2)}">MIN</td>`;
+  r4 += `<td rowspan="2" style="${hdrStyle(hdrGreen2)}">MAX</td>`;
+  r4 += `<td rowspan="2" style="${hdrStyle(hdrGreen2)}">Price/Unit</td>`;
+  r4 += `<td rowspan="2" style="${hdrStyle(hdrGreen2)}">Total Price</td>`;
+  html += `<tr>${r4}</tr>`;
+
+  // Row 5: รับ/จ่าย sub-headers
+  let r5 = '';
+  for (let d = 1; d <= D; d++) {
+    r5 += `<td style="${hdrStyle(hdrGreen1)}"></td>`;
+    r5 += `<td style="${hdrStyle(hdrBlue)}">รับ</td>`;
+    r5 += `<td style="${hdrStyle(hdrBlue)}">จ่าย</td>`;
+  }
+  html += `<tr>${r5}</tr>`;
+
+  // Data rows
   ALL_ITEMS.forEach((item, idx) => {
-    const r   = idx + 6;
     const no  = (item.n||'').trim().toUpperCase();
     const dsc = (item.d||'').trim().toLowerCase();
     const dd  = (no && (txByNo[no] || txByNo[no.toLowerCase()])) || txByDesc[dsc] || {};
-
-    // ยอดยกมา = ค่าจาก carryMap (ถ้ามี) + item.bal (ยอดตั้งต้นที่กรอกไว้)
     const carried = carryMap[no] || 0;
     const baseBal = (item.bal != null && item.bal !== '') ? Number(item.bal) : 0;
     const yodYokMa = carried + baseBal;
 
-    sc(r, 1, String(idx+1),   {font:fN, alignment:aC});
-    sc(r, 2, item.ref||'',    {font:fN});
-    sc(r, 3, item.n||'',      {font:fN});
-    sc(r, 4, item.d||'',      {font:fN});
-    sc(r, 5, yodYokMa, {font:fN, alignment:aC});
-    sc(r, 6, '', {font:fN});
+    let row = `<td style="${dataStyle()}">${idx+1}</td>`;
+    row += `<td style="${dataStyle()}">${item.ref||''}</td>`;
+    row += `<td style="${dataStyle()}">${item.n||''}</td>`;
+    row += `<td style="${dataStyle(true)}">${item.d||''}</td>`;
+    row += `<td style="${dataStyle()}">${yodYokMa||0}</td>`;
 
+    let totalRecv = yodYokMa, totalIssue = 0;
     for (let d = 1; d <= D; d++) {
       const day = dd[d] || {recv:0, issue:0};
-      sc(r, grpC(d), '', {font:fN});
-      if (day.recv  > 0) sc(r, recvC(d), day.recv,  {font:fN, alignment:aC, numFmt:'0'});
-      if (day.issue > 0) sc(r, issuC(d), day.issue, {font:fN, alignment:aC, numFmt:'0'});
+      row += `<td style="${dataStyle()}"></td>`;
+      row += `<td style="${dataStyle()}">${day.recv > 0 ? day.recv : ''}</td>`;
+      row += `<td style="${dataStyle()}">${day.issue > 0 ? day.issue : ''}</td>`;
+      totalRecv  += day.recv;
+      totalIssue += day.issue;
     }
-
-    // CU formula: E + all recv cols (matching template formula exactly)
-    const rcols = Array.from({length:D}, (_,i) => `${cl(recvC(i+1))}${r}`).join('+');
-    sf(r, CU, `E${r}+${rcols}`, {font:fN, alignment:aC});
-
-    const icols = Array.from({length:D}, (_,i) => `${cl(issuC(i+1))}${r}`).join('+');
-    sf(r, CV, icols, {font:fN, alignment:aC});
-
-    sf(r, CW, `${cl(CU)}${r}-${cl(CV)}${r}`, {font:fN, alignment:aC});
-
-    sc(r, CX, item.uom||'',  {font:fN});
-    sc(r, CY, (item.min != null && item.min !== '') ? Number(item.min) : '', {font:fN, alignment:aC});
-    sc(r, CZ, (item.max != null && item.max !== '') ? Number(item.max) : '', {font:fN, alignment:aC});
-    sc(r, DA, '', {font:fN, alignment:aC});
-    sc(r, DB, '', {font:fN, alignment:aC});
+    const yodKong = totalRecv - totalIssue;
+    row += `<td style="${dataStyle()}">${totalRecv}</td>`;
+    row += `<td style="${dataStyle()}">${totalIssue}</td>`;
+    row += `<td style="${dataStyle()}">${yodKong}</td>`;
+    row += `<td style="${dataStyle()}">${item.uom||''}</td>`;
+    row += `<td style="${dataStyle()}">${(item.min!=null&&item.min!=='')?Number(item.min):''}</td>`;
+    row += `<td style="${dataStyle()}">${(item.max!=null&&item.max!=='')?Number(item.max):''}</td>`;
+    row += `<td style="${dataStyle()}"></td>`;
+    row += `<td style="${dataStyle()}"></td>`;
+    html += `<tr>${row}</tr>`;
   });
+  html += '</table>';
 
-  // ── Sheet metadata ──
-  ws['!ref']    = XLSX.utils.encode_range({s:{r:0,c:0}, e:{r:ALL_ITEMS.length+5, c:DB-1}});
-  // Deduplicate merges to prevent corrupt XML
-  const mgSeen = new Set();
-  const mgDedup = mgs.filter(m => {
-    const k = `${m.s.r},${m.s.c},${m.e.r},${m.e.c}`;
-    if (mgSeen.has(k)) return false;
-    mgSeen.add(k); return true;
-  });
-  ws['!merges'] = mgDedup;
-  ws['!freeze'] = {xSplit:5, ySplit:5};  // freeze at F6
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const ws  = XLSX.utils.table_to_sheet(doc.querySelector('table'), {raw:false, cellStyles:true});
 
-  // Column widths — exact from template
+  // Column widths
   const cols = [];
-  cols[0]={wch:4.54}; cols[1]={wch:1.23}; cols[2]={wch:8.73}; cols[3]={wch:47.13}; cols[4]={wch:5.54};
+  cols[0]={wch:4}; cols[1]={wch:1.5}; cols[2]={wch:8}; cols[3]={wch:46}; cols[4]={wch:5};
   for (let d=1; d<=D; d++) {
-    cols[grpC(d)-1]  = {wch:5.13};
-    cols[recvC(d)-1] = {wch:5.13};
-    cols[issuC(d)-1] = {wch:5.13};
+    cols[grpC(d)-1]={wch:5}; cols[recvC(d)-1]={wch:5}; cols[issuC(d)-1]={wch:5};
   }
-  cols[CU-1]={wch:6.54}; cols[CV-1]={wch:6.54};
-  cols[CW-1]={wch:9.73}; cols[CX-1]={wch:9.73};
-  cols[CY-1]={wch:9.73}; cols[CZ-1]={wch:9.73};
-  cols[DA-1]={wch:11.23}; cols[DB-1]={wch:10.73};
+  cols[CU-1]={wch:6.5}; cols[CV-1]={wch:6.5}; cols[CW-1]={wch:10};
+  cols[CX-1]={wch:10}; cols[CY-1]={wch:6}; cols[CZ-1]={wch:6};
+  cols[DA-1]={wch:11}; cols[DB-1]={wch:11};
   ws['!cols'] = cols;
+  ws['!freeze'] = {xSplit:5, ySplit:5};
 
-  // Row heights — exact from template
-  const rowH = [{hpt:15},{hpt:13.8},{hpt:10.8},{hpt:15.75},{hpt:12.75}];
-  for (let i=0; i<ALL_ITEMS.length; i++) rowH.push({hpt:12.6});
-  ws['!rows'] = rowH;
-
-  if (extraItems.length > 0) showT(`📊 Export แล้ว (รวม ${extraItems.length} รายการใหม่ที่เพิ่มเข้ามา)`, 'ok');
-
+  const WB = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(WB, ws, 'Stock Card');
-  XLSX.writeFile(WB, dateFilter ? `Stock_Card_OR_${dateFilter}.xlsx` : `Stock_Card_OR_${dateStr}.xlsx`);
-  showT('📊 Export Stock Card Excel แล้ว!', 'ok');
+
+  if (extraItems.length > 0) showT(`📊 Export แล้ว (รวม ${extraItems.length} รายการใหม่)`, 'ok');
+
+  const fname = dateFilter ? `Stock_Card_OR_${dateFilter}.xlsx` : `Stock_Card_OR_${dateStr}.xlsx`;
+  try {
+    const raw = XLSX.write(WB, {bookType:'xlsx', type:'base64'});
+    const a = document.createElement('a');
+    a.href = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,' + raw;
+    a.download = fname;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    showT('📊 Export Stock Card Excel แล้ว!', 'ok');
+  } catch(e) {
+    XLSX.writeFile(WB, fname);
+    showT('📊 Export Stock Card Excel แล้ว!', 'ok');
+  }
 }
+
 
 
 /* ══════════════════════════════════════════
@@ -6931,6 +6973,7 @@ function _reloadAppData() {
   try { catOrder    = JSON.parse(localStorage.getItem('orCatOrder')   || '[]'); } catch(e){}
   try { _itemMarks  = JSON.parse(localStorage.getItem('orItemMarks')  || '{}'); } catch(e){}
   try { _prefixHues = JSON.parse(localStorage.getItem('orPrefixHues') || '{}'); } catch(e){}
+  try { _doneDays   = JSON.parse(localStorage.getItem('orDoneDays')   || '{}'); } catch(e){}
   // Re-render
   updSum(); rHist(); renderDocGrid(); rItems();
   showT('🔄 ซิงค์ข้อมูลจาก Firebase แล้ว', 'ok');
@@ -7436,23 +7479,36 @@ function saveEditEntry() {
     if (!qty || qty <= 0) { showT('กรุณาระบุจำนวน', 'e'); return; }
     const idx = saved.findIndex(s => s.savedAt === modal._editId || s.id === modal._editId);
     if (idx < 0) { showT('ไม่พบรายการ', 'e'); return; }
+    const oldDate = saved[idx].date;
     saved[idx] = { ...saved[idx], date, type, item_no: code, desc: desc || code, qty, note };
     showT('✅ บันทึกการแก้ไขแล้ว', 'ok');
+
+    // ถ้าวันที่เปลี่ยน → ย้าย calendar selection ไปวันใหม่
+    if (oldDate !== date) {
+      _selDate = date;
+      // ปรับเดือนปฏิทินถ้าวันใหม่อยู่คนละเดือน
+      const [ny, nm] = date.split('-').map(Number);
+      if (ny !== _calYear || nm !== _calMonth) {
+        _calYear = ny; _calMonth = nm;
+      }
+    }
   }
 
   localStorage.setItem('orSE', JSON.stringify(saved));
   if (window._fbWrite) window._fbWrite('orSE', saved);
   closeModal('modalEditEntry');
-  updSum(); rHist(); rHistDay();
+  updSum(); rHist(); renderCal(); rHistDay();
 }
 
 function deleteEntry(id) {
   const entry = saved.find(s => s.savedAt === id || s.id === id);
   if (!entry) return;
-  _delEntryId = id;
-  const msg = document.getElementById('delConfirmMsg');
-  if (msg) msg.textContent = `ลบรายการ "${entry.desc || entry.item_no}" จำนวน ${entry.qty} ?`;
-  document.getElementById('modalConfirmDelEntry')?.classList.add('open');
+  requireMasterPin('🔐 ยืนยันเพื่อลบรายการ "' + (entry.desc || entry.item_no) + '"', () => {
+    _delEntryId = id;
+    const msg = document.getElementById('delConfirmMsg');
+    if (msg) msg.textContent = `ลบรายการ "${entry.desc || entry.item_no}" จำนวน ${entry.qty} ?`;
+    document.getElementById('modalConfirmDelEntry')?.classList.add('open');
+  });
 }
 
 function deleteEntryConfirmed() {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stock Card OR</title>
+<title>Stock Card OR — ห้องผ่าตัด v4</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://apis.google.com/js/api.js" async defer></script>
@@ -1342,6 +1342,10 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-2px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           เพิ่มรายการ
         </button>
+        <button id="btnRecentItems" class="btn bc" style="padding:5px 12px;font-size:.8rem" onclick="toggleRecentBar()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          ล่าสุด
+        </button>
       </div>
 
       <!-- summary strip -->
@@ -1350,6 +1354,15 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
         <span style="padding:3px 10px;border-radius:20px;font-size:.74rem;background:#f8fafc;color:#475569" id="nc-showing"></span>
         <div class="sp"></div>
         <span style="font-size:.73rem;color:var(--g4);display:none">คลิก Code เพื่อแก้ไข</span>
+      </div>
+
+      <!-- แถบเพิ่ม/แก้ไขล่าสุด -->
+      <div id="recentItemsBar" style="display:none;padding:8px 16px;border-bottom:2px solid #e0f2fe;background:#f0f9ff">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0369a1" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span style="font-size:.76rem;font-weight:700;color:#0369a1">เพิ่ม / แก้ไขล่าสุด</span>
+        </div>
+        <div id="recentItemsList" style="display:flex;flex-wrap:wrap;gap:6px"></div>
       </div>
 
       <!-- table -->
@@ -2361,7 +2374,6 @@ const ITEMS=[
 {n:'MS2016',d:'Flat Sterilization Roll 4"(ซองอบแก๊ส) Size 100mm x 200m',bal:0,uom:'ROLL',min:null,max:null,price:0},
 {n:'MS2017',d:'Flat Sterilization Roll 6"(ซองอบแก๊ส) Size 150mm x 200m',bal:0,uom:'ROLL',min:null,max:null,price:0},
 {n:'MS2018',d:'Flat Sterilization Roll 8"(ซองอบแก๊ส) Size 200mm x 200m',bal:0,uom:'ROLL',min:null,max:null,price:0},
-{n:'MS2019',d:'Fluid Filter Ref.E4429-22 (0.2ไมครอน) (1x50)',bal:0,uom:'PIECE',min:null,max:null,price:0},
 {n:'MS2020',d:'Foley\'s Catheter 2 Way สายสวนปัสสวะ 14Fr(4.7mm)',bal:0,uom:'PIECE',min:null,max:null,price:0},
 {n:'MS2024',d:'แว่นตาป้องกัน ขาสีดำ',bal:0,uom:'PIECE',min:null,max:null,price:0},
 {n:'MS3001',d:'Membrane Amniotic (AMT) เยื่อหุ้มรก Size " S "',bal:0,uom:'BOTTLE',min:null,max:null,price:0},
@@ -2394,7 +2406,14 @@ const ITEMS=[
 {n:'MS1101',d:'Lens Case ตลับคอนแทคเลนส์',bal:0,uom:'PIECE',min:null,max:null,price:0},
 {n:'MS1112',d:'Extension Tube 42 inch',bal:0,uom:'PIECE',min:null,max:null,price:0},
 {n:'MS1113',d:'Extension with T 6 inch',bal:0,uom:'PIECE',min:null,max:null,price:0},
-{n:'MS1114',d:'Suction Tubing For con EVO SBK (box of 10)',bal:0,uom:'PIECE',min:null,max:null,price:0}
+{n:'MS1114',d:'Suction Tubing For con EVO SBK (box of 10)',bal:0,uom:'PIECE',min:null,max:null,price:0},
+{n:'MD0046',d:'Oxane HD 10 ml Syringe VRL700',bal:0,uom:'PIECE',min:null,max:null,price:0},
+{n:'MS1142',d:'Fluid Filter Ref.E4429-22 (0.2ไมครอน) (1x50)',bal:0,uom:'PIECE',min:null,max:null,price:0},
+{n:'MS1420',d:'Optosol 500 ml รอขอ Item No.',bal:0,uom:'PIECE',min:null,max:null,price:0},
+{n:'MT0052',d:'Amlopine 5 mg',bal:0,uom:'TABLETS',min:null,max:null,price:0},
+{n:'MT0053',d:'Immucept 500 mg',bal:0,uom:'TABLETS',min:null,max:null,price:0},
+{n:'MA0003',d:'Iliadin Drop 0.05% 10 ml.',bal:0,uom:'PIECE',min:null,max:null,price:0},
+{n:'MS2110',d:'Brillant blue Solution 0.05% รอขอItem No.',bal:0,uom:'PIECE',min:null,max:null,price:0}
 ];
 
 // Load from localStorage — orItems คือ source of truth
@@ -2428,7 +2447,7 @@ const ITEMS=[
   } catch(e) { console.warn('orItems load error:', e); }
 })();
 
-const CDB=[["Alcohol 70% Cotton Ball","MS1049"],["Cotton bud","MS1057"],["Insulin 27G","MS1285"],["Insulin 29G","MS1286"],["Insulin 31G","MS1287"],["Cotton ball สำลีก้อน","MS1051"],["Eye pad","MS1094"],["Eye Shield แบบใส","MS2007"],["Eye Sheild Lt","MS2005"],["Eye Sheild Rt","MS2006"],["Syringe 1 ml","MS1277"],["Syringe 1 ml Needle 27G Nipro U-100","MS1273"],["Syringe 3 ml","MS1275"],["Syringe 3 ml luer lock","MS1267"],["Syringe 5 ml","MS1276"],["Syringe 5 ml luer lock","MS1269"],["Syringe 10 ml","MS1274"],["Syringe 20 ml","MS1313"],["Syringe 50 ml","MS1272"],["FMS Centurian Active","MS1039"],["Gauze 4x4","MS1247"],["Iris Retractor","MS1327"],["Kiawan cautery Bowie","MS1351"],["Opsite 15x28","MS1221"],["Pack Disposable","MS1080"],["Set IV","MS1236"],["Tegaderm 6x7","MS1283"],["Tegaderm 10x12","MS1282"],["Ultravit Vitrectomy 23G","MS1041"],["Weck-cel มีก้าน","MS1400"],["Weck-cel ไม่มีก้าน","MS1309"],["Needle 18G","MS1208"],["Needle 20G","MS1209"],["Needle 21G 1.5","MS1196"],["Needle 21G 1","MS1197"],["Needle 23G","MS1199"],["Needle 25G 1","MS1202"],["Needle 25G 1.5","MS1201"],["Needle 26G","MS1204"],["Needle 27G","MS1206"],["Needle 30G","MS1207"],["Jelco 18","MS1163"],["Jelco 20","MS1164"],["Jelco 22","MS1165"],["Jelco 24","MS1166"],["Blade 11","MS1025"],["Blade 15","MS1026"],["Blade Hocky knife","MS1062"],["Crescent Bevel UP","MS1396"],["Side port Alcon","MS1328"],["Side port MANI","MS1177"],["Slit knife Alcon 2.75","MS1045"],["Slit knife Alcon 2.4","MS1044"],["15 Super Sharp MANI","MS1193"],["Slit knife MANI 2.4","MS1189"],["Slit knife MANI 2.75","MS1190"],["Slit knife MANI 3.0","MS1191"],["Nimbex","MI0041"],["Bridion","MI0007"],["Esmeron","MI0007"],["Suxamethonium","MI0053"],["Divomit","MI0014"],["Chlorpheniramine","MI0009"],["Duovisc","MS1081"],["IAL-F","MS1319"],["Pe-Ha-Luron","MS1338"],["Provisc","MS1401"],["Atropine sulfate","MI0004"],["Protectalon","MS1379"],["Neostigmine","MI0039"],["Viscoat","MS1300"],["Propofol","MI0047"],["Ondansetron","MI0059"],["Ketolac","MI0030"],["Membraneblue","MS3003"],["Noradrenaline","MI0042"],["Tryphan blue","MD0064"],["Infulgan","MI0026"],["Cornea Marker","MS1371"],["Severane","MN0001"],["Medium Drape","MS1417"],["Xylocaine jelly","MP0007"],["Suction catheter 12","MS1251"],["Suction catheter 10","MS1250"],["Suction catheter 14","MS1252"],["Suction catheter 16","MS1253"],["Prasil","MI0070"],["Bipolar Grounding Pad","MS1412"],["Three way stopcock","MS1293"],["Extension TUBE 18","MS1091"],["NSS 0.9% 500ml","MS0173"],["NSS 0.9% 1000ml","MI0043"],["Nylon 10-0 MANI","MS1388"],["D5 1/2S 1000ml","MS0174"],["Nylon Black 10-0 USP","MS1220"],["Silk 4-0 Mersilk W604G","MS1302"],["Red dot EKG","MS1340"],["Silk 6-0 Mersilk","MS1304"],["Silk 8-0 Alcon","MS1012"],["PC-9 10-0","MS1029"],["Prolene 6-0 W8003T","MS1303"],["Prolene 9-0 MANI","MS1174"],["Prolene 10-0","MS1374"],["Surgidac 5-0","MS1255"],["Vicryl 6-0 W9552","MS1305"],["Vicryl 8-0 W9560","MS1307"],["Vicryl 5-0 W9553","MS1306"],["Vicryl 7-0 W9561","MS1308"],["Constellation V Pack 23G","MS1289"],["Constellation V Pack 25G","MS1291"],["Constellation Combine 23G","MS1047"],["Constellation Combine 25G","MS1046"],["23G ILM Forcep","MS1105"],["Ethilon 8-0 W1765","MS1301"],["23G Laser probe","MS1172"],["Nylon 6-0 Dafilon","MS1219"],["23G MaxGrip","MS1005"],["Fornia Supraseal 3.0","MS1106"],["Advanced DSP ILM 23G","MS1004"],["Fornia Supraseal 4.0","MS1107"],["Fornia Supraseal 5.0","MS1108"],["Chandelier","MS1042"],["Diathermy Probe DSP","MS1072"],["25G ILM Forcep DSP","MS1102"],["LMA Flexible 3","MS1075"],["25G ILM Forcep Tip","MS1103"],["LMA Flexible 4","MS1076"],["25G Laser Probe","MS1171"],["LMA Flexible 5","MS1077"],["25G MaxGrip","MS1104"],["25G Soft tip","MS1244"],["HME Filter ผู้ใหญ่","MS1241"],["27G soft tip","MS1243"],["HME Filter เด็ก","MS1242"],["Coated vicryl 6/0","MS1413"],["Dafilon 6/0","MS1219"],["Dermalon 6-0","MS1415"],["Fluid Filter 0.2 micron","MS2019"],["Tisseel FIBRIN GLUE","MS1325"],["Fluorescein Sodium Paper","MS1100"],["Adrenaline","MI0001"],["Alphagan P","MD0040"],["Atropine 1%","MD0002"],["Cef-4","MI0062"],["ChlorOph","MO0001"],["Cravit","MD0016"],["Dexamethasone 4mg","MI0012"],["Ducressa","MD0022"],["Gentamycin","MI0023"],["Hyaluronidase","MI0025"],["Perfluoron","MI0020"],["Lidocaine 2% Adrenaline","MI0058"],["Marcaine 0.5% 10ml","MI0031"],["Marcaine 0.5% 20ml","MI0032"],["Maxitrol","MO0002"],["Medicaine","MI0033"],["Miostat","MI0036"],["Mitomycin","MI0056"],["Mydriacyl","MD0038"],["Nevanac","MD0043"],["Phenylephrine","MD0052"],["Pred Forte","MD0054"],["Terramycin","MO0004"],["Tetracaine","MD0075"],["Timoptol","MD0066"],["TobraDex drops","MD0061"],["TobraDex ointment","MO0005"],["Triamcinolone 10mg","MI0027"],["Triamcinolone 40mg","MI0028"],["Vancomycin","MI0063"],["Vidisic gel","MG0003"],["Vigamox","MD0065"],["BSS 15ml","MP0004"],["BSS bag 500ml","MP0006"],["BSS Plus 500ml","MP0005"],["Ocusol 250ml","MD0044"],["Ocusol 500ml","MD0045"],["Povidone-Iodine","MX0014"],["Sterile Water 5ml","MI0052"],["TPA Actilyse","MI0054"],["Avastin","MI0005"],["Vabysmo","MI0055"],["Diazepam","MT0014"],["Lorazepam","MT0021"],["Nifedipine","MT0024"],["Paracetamol 500mg","MT0025"],["Tylenol","MT0031"],["Ultracet","MT0040"],["Fentanyl","MI0019"],["Midazolam","MI0035"],["Morphine","MI0037"],["Pethidine","MI0046"],["Dynastat","MI0068"],["Ephedrine","MI0016"],["XEN GLAUCOMA GEL","MS1346"],["Prolene 7-0","MS1418"],["Mersilk 4/0","MS1361"],["Novasorb 3/0","MS1405"],["Novasorb 4/0","MS1406"],["Silicone oil 5000","MS1414"]];
+const CDB=[["Alcohol 70% Cotton Ball","MS1049"],["Cotton bud","MS1057"],["Insulin 27G","MS1285"],["Insulin 29G","MS1286"],["Insulin 31G","MS1287"],["Cotton ball สำลีก้อน","MS1051"],["Eye pad","MS1094"],["Eye Shield แบบใส","MS2007"],["Eye Sheild Lt","MS2005"],["Eye Sheild Rt","MS2006"],["Syringe 1 ml","MS1277"],["Syringe 1 ml Needle 27G Nipro U-100","MS1273"],["Syringe 3 ml","MS1275"],["Syringe 3 ml luer lock","MS1267"],["Syringe 5 ml","MS1276"],["Syringe 5 ml luer lock","MS1269"],["Syringe 10 ml","MS1274"],["Syringe 20 ml","MS1313"],["Syringe 50 ml","MS1272"],["FMS Centurian Active","MS1039"],["Gauze 4x4","MS1247"],["Iris Retractor","MS1327"],["Kiawan cautery Bowie","MS1351"],["Opsite 15x28","MS1221"],["Pack Disposable","MS1080"],["Set IV","MS1236"],["Tegaderm 6x7","MS1283"],["Tegaderm 10x12","MS1282"],["Ultravit Vitrectomy 23G","MS1041"],["Weck-cel มีก้าน","MS1400"],["Weck-cel ไม่มีก้าน","MS1309"],["Needle 18G","MS1208"],["Needle 20G","MS1209"],["Needle 21G 1.5","MS1196"],["Needle 21G 1","MS1197"],["Needle 23G","MS1199"],["Needle 25G 1","MS1202"],["Needle 25G 1.5","MS1201"],["Needle 26G","MS1204"],["Needle 27G","MS1206"],["Needle 30G","MS1207"],["Jelco 18","MS1163"],["Jelco 20","MS1164"],["Jelco 22","MS1165"],["Jelco 24","MS1166"],["Blade 11","MS1025"],["Blade 15","MS1026"],["Blade Hocky knife","MS1062"],["Crescent Bevel UP","MS1396"],["Side port Alcon","MS1328"],["Side port MANI","MS1177"],["Slit knife Alcon 2.75","MS1045"],["Slit knife Alcon 2.4","MS1044"],["15 Super Sharp MANI","MS1193"],["Slit knife MANI 2.4","MS1189"],["Slit knife MANI 2.75","MS1190"],["Slit knife MANI 3.0","MS1191"],["Nimbex","MI0041"],["Bridion","MI0007"],["Esmeron","MI0007"],["Suxamethonium","MI0053"],["Divomit","MI0014"],["Chlorpheniramine","MI0009"],["Duovisc","MS1081"],["IAL-F","MS1319"],["Pe-Ha-Luron","MS1338"],["Provisc","MS1401"],["Atropine sulfate","MI0004"],["Protectalon","MS1379"],["Neostigmine","MI0039"],["Viscoat","MS1300"],["Propofol","MI0047"],["Ondansetron","MI0059"],["Ketolac","MI0030"],["Membraneblue","MS3003"],["Noradrenaline","MI0042"],["Tryphan blue","MD0064"],["Infulgan","MI0026"],["Cornea Marker","MS1371"],["Severane","MN0001"],["Medium Drape","MS1417"],["Xylocaine jelly","MP0007"],["Suction catheter 12","MS1251"],["Suction catheter 10","MS1250"],["Suction catheter 14","MS1252"],["Suction catheter 16","MS1253"],["Prasil","MI0070"],["Bipolar Grounding Pad","MS1412"],["Three way stopcock","MS1293"],["Extension TUBE 18","MS1091"],["NSS 0.9% 500ml","MS0173"],["NSS 0.9% 1000ml","MI0043"],["Nylon 10-0 MANI","MS1388"],["D5 1/2S 1000ml","MS0174"],["Nylon Black 10-0 USP","MS1220"],["Silk 4-0 Mersilk W604G","MS1302"],["Red dot EKG","MS1340"],["Silk 6-0 Mersilk","MS1304"],["Silk 8-0 Alcon","MS1012"],["PC-9 10-0","MS1029"],["Prolene 6-0 W8003T","MS1303"],["Prolene 9-0 MANI","MS1174"],["Prolene 10-0","MS1374"],["Surgidac 5-0","MS1255"],["Vicryl 6-0 W9552","MS1305"],["Vicryl 8-0 W9560","MS1307"],["Vicryl 5-0 W9553","MS1306"],["Vicryl 7-0 W9561","MS1308"],["Constellation V Pack 23G","MS1289"],["Constellation V Pack 25G","MS1291"],["Constellation Combine 23G","MS1047"],["Constellation Combine 25G","MS1046"],["23G ILM Forcep","MS1105"],["Ethilon 8-0 W1765","MS1301"],["23G Laser probe","MS1172"],["Nylon 6-0 Dafilon","MS1219"],["23G MaxGrip","MS1005"],["Fornia Supraseal 3.0","MS1106"],["Advanced DSP ILM 23G","MS1004"],["Fornia Supraseal 4.0","MS1107"],["Fornia Supraseal 5.0","MS1108"],["Chandelier","MS1042"],["Diathermy Probe DSP","MS1072"],["25G ILM Forcep DSP","MS1102"],["LMA Flexible 3","MS1075"],["25G ILM Forcep Tip","MS1103"],["LMA Flexible 4","MS1076"],["25G Laser Probe","MS1171"],["LMA Flexible 5","MS1077"],["25G MaxGrip","MS1104"],["25G Soft tip","MS1244"],["HME Filter ผู้ใหญ่","MS1241"],["27G soft tip","MS1243"],["HME Filter เด็ก","MS1242"],["Coated vicryl 6/0","MS1413"],["Dafilon 6/0","MS1219"],["Dermalon 6-0","MS1415"],["Fluid Filter 0.2 micron","MS1142"],["Tisseel FIBRIN GLUE","MS1325"],["Fluorescein Sodium Paper","MS1100"],["Adrenaline","MI0001"],["Alphagan P","MD0040"],["Atropine 1%","MD0002"],["Cef-4","MI0062"],["ChlorOph","MO0001"],["Cravit","MD0016"],["Dexamethasone 4mg","MI0012"],["Ducressa","MD0022"],["Gentamycin","MI0023"],["Hyaluronidase","MI0025"],["Perfluoron","MI0020"],["Lidocaine 2% Adrenaline","MI0058"],["Marcaine 0.5% 10ml","MI0031"],["Marcaine 0.5% 20ml","MI0032"],["Maxitrol","MO0002"],["Medicaine","MI0033"],["Miostat","MI0036"],["Mitomycin","MI0056"],["Mydriacyl","MD0038"],["Nevanac","MD0043"],["Phenylephrine","MD0052"],["Pred Forte","MD0054"],["Terramycin","MO0004"],["Tetracaine","MD0075"],["Timoptol","MD0066"],["TobraDex drops","MD0061"],["TobraDex ointment","MO0005"],["Triamcinolone 10mg","MI0027"],["Triamcinolone 40mg","MI0028"],["Vancomycin","MI0063"],["Vidisic gel","MG0003"],["Vigamox","MD0065"],["BSS 15ml","MP0004"],["BSS bag 500ml","MP0006"],["BSS Plus 500ml","MP0005"],["Ocusol 250ml","MD0044"],["Ocusol 500ml","MD0045"],["Povidone-Iodine","MX0014"],["Sterile Water 5ml","MI0052"],["TPA Actilyse","MI0054"],["Avastin","MI0005"],["Vabysmo","MI0055"],["Diazepam","MT0014"],["Lorazepam","MT0021"],["Nifedipine","MT0024"],["Paracetamol 500mg","MT0025"],["Tylenol","MT0031"],["Ultracet","MT0040"],["Fentanyl","MI0019"],["Midazolam","MI0035"],["Morphine","MI0037"],["Pethidine","MI0046"],["Dynastat","MI0068"],["Ephedrine","MI0016"],["XEN GLAUCOMA GEL","MS1346"],["Prolene 7-0","MS1418"],["Mersilk 4/0","MS1361"],["Novasorb 3/0","MS1405"],["Novasorb 4/0","MS1406"],["Silicone oil 5000","MS1414"]];
 
 /* ══════════════════════════════════════════
    STATE
@@ -6369,19 +6388,28 @@ function saveEditItem() {
   const min  = parseFloat(document.getElementById('eiMin').value) || 0;
   const max  = parseFloat(document.getElementById('eiMax').value) || 0;
   const carryVal = parseFloat(document.getElementById('eiCarry').value);
-  const newBal = isNaN(carryVal) ? 0 : carryVal;  // bal = ยอดยกมาตั้งต้น
+  const newBal = isNaN(carryVal) ? 0 : carryVal;
   const warn = document.getElementById('eiWarn');
+  const nowTs = new Date().toLocaleString('th-TH');
+  const nowRaw = Date.now();
   warn.style.display = 'none';
 
   if (!code) { warn.style.display=''; warn.textContent='กรุณากรอก Item No.'; return; }
   if (!desc) { warn.style.display=''; warn.textContent='กรุณากรอกชื่อรายการ'; return; }
 
   if (_editItemCode === null) {
-    // New
-    const dup = ITEMS.find(i => i.n === code);
-    if (dup) { warn.style.display=''; warn.textContent='รหัส '+code+' มีอยู่แล้ว: "'+dup.d+'"'; return; }
-    ITEMS.push({n:code, d:desc, bal: newBal, uom, min, max, price:0});
-    showT('เพิ่มรายการ '+code+' แล้ว', 'ok');
+    // New — ถ้า code ซ้ำให้ overwrite ด้วยของใหม่
+    const dupIdx = ITEMS.findIndex(i => i.n === code);
+    if (dupIdx >= 0) {
+      // overwrite รายการเดิม แทนที่จะ error
+      ITEMS[dupIdx] = {...ITEMS[dupIdx], n:code, d:desc, uom, min, max, bal:newBal, updatedAt:nowTs, updatedRaw:nowRaw, isNew:false};
+      showT('อัปเดตรายการ '+code+' แล้ว (พบรายการซ้ำ)', 'ok');
+      addLog('edit', `อัปเดต ${code} — ${desc}`);
+    } else {
+      ITEMS.push({n:code, d:desc, bal:newBal, uom, min, max, price:0, updatedAt:nowTs, updatedRaw:nowRaw, isNew:true});
+      showT('เพิ่มรายการ '+code+' แล้ว', 'ok');
+      addLog('save', `เพิ่มรายการใหม่ ${code} — ${desc}`);
+    }
   } else {
     // Edit
     const idx = ITEMS.findIndex(i => i.n === _editItemCode);
@@ -6389,15 +6417,27 @@ function saveEditItem() {
     if (code !== _editItemCode) {
       const dup = ITEMS.find((i,ii) => i.n === code && ii !== idx);
       if (dup) { warn.style.display=''; warn.textContent='รหัส '+code+' มีอยู่แล้ว: "'+dup.d+'"'; return; }
-      // อัปเดต item_no ใน saved ด้วย
-      saved = saved.map(s => s.item_no === _editItemCode ? {...s, item_no: code} : s);
+    }
+    ITEMS[idx] = {...ITEMS[idx], n:code, d:desc, uom, min, max, bal:newBal, updatedAt:nowTs, updatedRaw:nowRaw, isNew:false};
+
+    // ถ้า Code เปลี่ยน → ย้าย history ทั้งหมดไป code ใหม่
+    if (code !== _editItemCode) {
+      let movedCount = 0;
+      saved = saved.map(s => {
+        if ((s.item_no||'').trim().toUpperCase() === _editItemCode.toUpperCase()) {
+          movedCount++;
+          return {...s, item_no: code};
+        }
+        return s;
+      });
       localStorage.setItem('orSE', JSON.stringify(saved));
       if (window._fbWrite) window._fbWrite('orSE', saved);
+      if (movedCount > 0) showT(`✅ ย้าย ${movedCount} รายการประวัติ ${_editItemCode} → ${code} แล้ว`, 'ok');
+    } else {
+      showT('แก้ไข '+code+' แล้ว', 'ok');
     }
-    ITEMS[idx] = {...ITEMS[idx], n:code, d:desc, uom, min, max, bal: newBal};
-    showT('แก้ไข '+code+' แล้ว', 'ok');
+    addLog('edit', `แก้ไข ${_editItemCode} → ${code} — ${desc}`);
   }
-  // Rebuild search index + sync (saveItems ทำ localStorage + Firebase ในที่เดียว)
   if (window.ITOK) window.ITOK = ITEMS.map(i => ({...i, tk: tok(i.d+' '+i.n)}));
   saveItems();
   closeModal('modalEditItem');
@@ -6456,7 +6496,6 @@ function rItems() {
   if (uom)    rows = rows.filter(i => (i.uom||'').toUpperCase() === uom.toUpperCase());
   if (prefix) rows = rows.filter(i => i.n.toUpperCase().startsWith(prefix));
 
-  // Sort
   const {key, asc} = _itmSort;
   rows.sort((a,b) => {
     let va = a[key], vb = b[key];
@@ -6470,7 +6509,56 @@ function rItems() {
   const showEl = document.getElementById('nc-showing');
   if (showEl) showEl.textContent = (q||uom||prefix) ? ('แสดง '+rows.length+' รายการ') : '';
 
+  renderRecentItems();
   renderItemsAll(rows);
+}
+
+function toggleRecentBar() {
+  const bar = document.getElementById('recentItemsBar');
+  const btn = document.getElementById('btnRecentItems');
+  if (!bar) return;
+  const isOpen = bar.style.display !== 'none';
+  if (isOpen) {
+    bar.style.display = 'none';
+    if (btn) { btn.style.background = ''; btn.style.color = ''; }
+  } else {
+    renderRecentItems(true);
+    if (btn) { btn.style.background = '#dbeafe'; btn.style.color = '#1d4ed8'; }
+  }
+}
+
+function renderRecentItems(forceShow) {
+  const bar  = document.getElementById('recentItemsBar');
+  const list = document.getElementById('recentItemsList');
+  if (!bar || !list) return;
+
+  const recent = ITEMS
+    .filter(i => i.updatedRaw)
+    .slice()
+    .sort((a, b) => (b.updatedRaw||0) - (a.updatedRaw||0))
+    .slice(0, 10);
+
+  if (!recent.length) {
+    if (forceShow) { bar.style.display = ''; list.innerHTML = '<span style="font-size:.78rem;color:var(--g4)">ยังไม่มีรายการที่แก้ไข</span>'; }
+    return;
+  }
+  if (forceShow) bar.style.display = '';
+
+  list.innerHTML = recent.map(i => {
+    const isNew  = i.isNew;
+    const bg     = isNew ? '#dcfce7' : '#dbeafe';
+    const color  = isNew ? '#15803d' : '#1d4ed8';
+    const border = isNew ? '#86efac' : '#93c5fd';
+    const tag    = isNew ? '✨ ใหม่' : '✏️ แก้ไข';
+    return `<div onclick="openEditItem('${esc(i.n)}')"
+      style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:8px;background:#fff;border:1.5px solid ${border};cursor:pointer;transition:all .15s"
+      onmouseover="this.style.background='${bg}'" onmouseout="this.style.background='#fff'">
+      <span style="font-size:.68rem;font-weight:700;background:${bg};color:${color};padding:1px 5px;border-radius:4px">${tag}</span>
+      <span style="font-family:monospace;font-size:.72rem;color:${color};font-weight:600">${esc(i.n)}</span>
+      <span style="font-size:.75rem;color:var(--g8);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(i.d)}</span>
+      <span style="font-size:.67rem;color:var(--g4)">${i.updatedAt||''}</span>
+    </div>`;
+  }).join('');
 }
 
 function renderItemsAll(items) {

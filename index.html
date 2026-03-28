@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stock Card OR</title>
+<title>Stock Card OR — ห้องผ่าตัด v4</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://apis.google.com/js/api.js" async defer></script>
@@ -1430,12 +1430,12 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
       </div>
 
       <!-- แถบเพิ่ม/แก้ไขล่าสุด -->
-      <div id="recentItemsBar" style="display:none;padding:8px 16px;border-bottom:2px solid #e0f2fe;background:#f0f9ff">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0369a1" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <span style="font-size:.76rem;font-weight:700;color:#0369a1">เพิ่ม / แก้ไขล่าสุด</span>
+      <div id="recentItemsBar" style="display:none;padding:0;border-bottom:1px solid var(--g2);background:#fff">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--g2);background:var(--g1)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span style="font-size:.76rem;font-weight:700;color:var(--primary)">เพิ่ม / แก้ไขล่าสุด</span>
         </div>
-        <div id="recentItemsList" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        <div id="recentItemsList"></div>
       </div>
 
       <!-- table -->
@@ -6940,16 +6940,21 @@ function renderRecentItems(forceShow) {
     'edit':   { tag:'✏️ แก้ไข', bg:'#dbeafe', color:'#1d4ed8', border:'#93c5fd' },
     'delete': { tag:'🗑️ ลบ',   bg:'#fee2e2', color:'#b91c1c', border:'#fca5a5' },
   };
-  const chips = paged.map(entry => {
+  // Build numbered vertical list
+  const rows = paged.map((entry, i) => {
     const s = ACTION_MAP[entry.action] || ACTION_MAP['edit'];
     const clickable = entry.action !== 'delete';
+    const rowNum = startIdx + i + 1;
+    const isEven = i % 2 === 1;
     return `<div ${clickable ? `onclick="openEditItem('${esc(entry.code)}')"` : ''}
-      style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:8px;background:#fff;border:1.5px solid ${s.border};cursor:${clickable?'pointer':'default'};transition:all .15s"
-      ${clickable ? `onmouseover="this.style.background='${s.bg}'" onmouseout="this.style.background='#fff'"` : ''}>
-      <span style="font-size:.67rem;font-weight:700;background:${s.bg};color:${s.color};padding:1px 5px;border-radius:4px;white-space:nowrap">${s.tag}</span>
-      <span style="font-family:monospace;font-size:.72rem;color:${s.color};font-weight:600;white-space:nowrap">${esc(entry.code)}</span>
-      <span style="font-size:.75rem;color:var(--g8);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(entry.desc)}</span>
-      <span style="font-size:.66rem;color:var(--g4);white-space:nowrap">${entry.ts}</span>
+      style="display:flex;align-items:center;gap:10px;padding:6px 14px;background:${isEven ? '#f8fafc' : '#fff'};border-bottom:1px solid var(--g2);cursor:${clickable ? 'pointer' : 'default'};transition:background .12s"
+      ${clickable ? `onmouseover="this.style.background='${s.bg}'" onmouseout="this.style.background='${isEven ? '#f8fafc' : '#fff'}'"` : ''}>
+      <span style="min-width:24px;text-align:right;font-size:.71rem;color:var(--g4);font-family:monospace;flex-shrink:0">${rowNum}</span>
+      <span style="font-size:.68rem;font-weight:700;background:${s.bg};color:${s.color};padding:1px 7px;border-radius:10px;border:1px solid ${s.border};white-space:nowrap;flex-shrink:0">${s.tag}</span>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:.73rem;color:var(--primary);font-weight:700;white-space:nowrap;flex-shrink:0;min-width:80px">${esc(entry.code)}</span>
+      <span style="font-size:.8rem;color:var(--g8);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(entry.desc)}</span>
+      <span style="font-size:.68rem;color:var(--g4);white-space:nowrap;flex-shrink:0">${entry.ts}</span>
+      ${clickable ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--g4)" stroke-width="2" stroke-linecap="round" style="flex-shrink:0"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>` : ''}
     </div>`;
   }).join('');
 
@@ -6962,9 +6967,9 @@ function renderRecentItems(forceShow) {
       btns+=`<button style="${btnSt(p===_recentItemsPage)}" onclick="_recentGoPage(${p})">${p}</button>`;
     }
     btns+=`<button style="${btnSt(false)}opacity:${_recentItemsPage===totalPages?'.4':'1'}" ${_recentItemsPage===totalPages?'disabled':''} onclick="_recentGoPage(${_recentItemsPage+1})">›</button>`;
-    pagerHtml=`<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-top:8px"><span style="font-size:.72rem;color:var(--g4);margin-right:4px">${startIdx+1}–${Math.min(startIdx+RECENT_ITEMS_PER_PAGE,total)} จาก ${total}</span>${btns}</div>`;
+    pagerHtml=`<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:7px 14px;border-top:1px solid var(--g2)"><span style="font-size:.72rem;color:var(--g4);margin-right:4px">${startIdx+1}–${Math.min(startIdx+RECENT_ITEMS_PER_PAGE,total)} จาก ${total}</span>${btns}</div>`;
   }
-  list.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:6px">${chips}</div>${pagerHtml}`;
+  list.innerHTML = `<div style="border-radius:0 0 var(--r) var(--r);overflow:hidden">${rows}</div>${pagerHtml}`;
 }
 
 function _recentGoPage(p) { _recentItemsPage = p; renderRecentItems(true); }

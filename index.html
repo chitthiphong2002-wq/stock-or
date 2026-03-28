@@ -566,6 +566,31 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
   .resp-cal-layout{ grid-template-columns:1fr !important; }
   .fr2            { grid-template-columns:1fr !important; }
 }
+
+/* ── NOTE TAB ── */
+.note-tb-btn{
+  background:#fff;border:1px solid var(--g3);border-radius:4px;
+  padding:3px 7px;cursor:pointer;font-family:'Sarabun',sans-serif;
+  font-size:.78rem;color:var(--g6);transition:all .15s;line-height:1.4;
+  display:inline-flex;align-items:center;
+}
+.note-tb-btn:hover{background:var(--primary-b);border-color:var(--primary-l);color:var(--primary)}
+.note-list-item{
+  padding:9px 12px;border-radius:7px;cursor:pointer;border:1.5px solid var(--g3);
+  background:#fff;transition:all .15s;position:relative;
+}
+.note-list-item:hover{border-color:var(--primary-l);background:var(--primary-b)}
+.note-list-item.active{border-color:var(--primary);background:var(--primary-b);box-shadow:0 0 0 2px rgba(26,35,126,.12)}
+.note-list-item .note-list-title{font-size:.84rem;font-weight:700;color:var(--g8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.note-list-item .note-list-preview{font-size:.73rem;color:var(--g4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.note-list-item .note-list-meta{font-size:.66rem;color:var(--g4);margin-top:3px}
+.note-list-item .note-pin-dot{position:absolute;top:7px;right:8px;font-size:.75rem}
+#noteEditor h2{font-size:1.18rem;font-weight:700;color:var(--primary);margin:10px 0 4px}
+#noteEditor h3{font-size:1rem;font-weight:700;color:var(--primary-m);margin:8px 0 3px}
+#noteEditor p{margin:4px 0}
+#noteEditor ul,#noteEditor ol{padding-left:20px;margin:4px 0}
+#noteEditor li{margin:2px 0}
+#noteEditor:empty:before{content:attr(data-placeholder);color:var(--g3);pointer-events:none}
 </style>
   <!-- Firebase SDK -->
   <script type="module">
@@ -635,7 +660,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
       window._fbPending = {};
 
       // ── Initial load: Firebase → localStorage → app ──
-      const KEYS = ['orSE','orDocs','orItems','orCatOrder','orCatC','orCustomCats','orItemMarks','orPrefixHues','orDoneDays','orActivityLog'];
+      const KEYS = ['orSE','orDocs','orItems','orCatOrder','orCatC','orCustomCats','orItemMarks','orPrefixHues','orDoneDays','orActivityLog','orNotes'];
       const STR_KEYS = ['orPinHash','orMasterPinHash'];
       let needReload = false;
       for (const k of KEYS) {
@@ -760,6 +785,37 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
         if (val && Array.isArray(val)) {
           localStorage.setItem(USERS_KEY, JSON.stringify(val));
         }
+      });
+
+      // ── Sync orNotes ──
+      window._fbListen('orNotes', val => {
+        if (!Array.isArray(val)) return;
+        const remote = JSON.stringify(val);
+        if (localStorage.getItem('orNotes') === remote) return;
+        localStorage.setItem('orNotes', remote);
+        try {
+          if (typeof _notes !== 'undefined') {
+            _notes = val;
+            // ถ้าแท็บ Notes กำลังเปิดอยู่ → re-render list
+            if (document.getElementById('tnotes')?.classList.contains('ac')) {
+              if (typeof renderNoteList === 'function') renderNoteList();
+              // sync เนื้อหา note ที่กำลังแก้อยู่ (เฉพาะถ้ายังไม่ dirty)
+              if (_curNoteId && !_noteDirty) {
+                const cur = _notes.find(n => n.id === _curNoteId);
+                if (cur) {
+                  const editor = document.getElementById('noteEditor');
+                  if (editor && editor.innerHTML !== cur.content) {
+                    editor.innerHTML = cur.content || '';
+                  }
+                  const titleEl = document.getElementById('noteTitleInput');
+                  if (titleEl && titleEl.value !== (cur.title||'')) {
+                    titleEl.value = cur.title || '';
+                  }
+                }
+              }
+            }
+          }
+        } catch(e) { console.warn('orNotes listener:', e); }
       });
 
     });
@@ -937,6 +993,10 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
     <div class="tab" onclick="swTab('log')">
       <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
       Activity Log
+    </div>
+    <div class="tab" onclick="swTab('notes')">
+      <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></span>
+      Note
     </div>
   </div>
 
@@ -1257,23 +1317,23 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
         <h2>Activity Log</h2>
         <div class="sp"></div>
         <!-- Filters — แถวเดียวกัน: ประเภท | user | ค้นหา | ล้าง -->
-        <select id="logFilterAction" onchange="renderLog()" style="font-size:.78rem;padding:4px 8px;max-width:130px">
+        <select id="logFilterAction" onchange="_logPage=1;renderLog()" style="font-size:.78rem;padding:4px 8px;max-width:130px">
           <option value="">📋 ทุกประเภท</option>
           <option value="save">บันทึกรายการ</option>
           <option value="delete">ลบรายการ</option>
           <option value="edit">แก้ไขรายการ</option>
           <option value="export">Export</option>
         </select>
-        <select id="logFilterUser" onchange="renderLog()" style="font-size:.78rem;padding:4px 8px;max-width:130px">
+        <select id="logFilterUser" onchange="_logPage=1;renderLog()" style="font-size:.78rem;padding:4px 8px;max-width:130px">
           <option value="">👤 ทุกคน</option>
         </select>
-        <input type="text" id="logSearch" placeholder="🔍 ค้นหา..." oninput="renderLog()" style="width:130px;font-size:.78rem;padding:4px 8px">
+        <input type="text" id="logSearch" placeholder="🔍 ค้นหา..." oninput="_logPage=1;renderLog()" style="width:130px;font-size:.78rem;padding:4px 8px">
         <button class="btn bd" style="padding:4px 10px;font-size:.78rem" onclick="clearActivityLog()">🗑 ล้าง Log</button>
       </div>
       <!-- Summary strip -->
       <div id="logSummaryBar" style="display:flex;gap:10px;padding:8px 16px;border-bottom:1px solid var(--g2);flex-wrap:wrap"></div>
       <!-- Log list -->
-      <div style="overflow-y:auto;max-height:70vh">
+      <div style="overflow-x:auto">
         <table class="ht" style="min-width:680px">
           <thead style="position:sticky;top:0;z-index:2">
             <tr>
@@ -1290,6 +1350,11 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
           <div style="font-size:2rem;margin-bottom:8px">📋</div>
           ยังไม่มี Activity Log
         </div>
+      </div>
+      <!-- Pagination -->
+      <div id="logPagination" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:10px 16px;border-top:1px solid var(--g2);background:var(--g1)">
+        <span id="logPageInfo" style="font-size:.76rem;color:var(--g4)"></span>
+        <div id="logPageBtns" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center"></div>
       </div>
     </div>
   </div>
@@ -1384,6 +1449,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
           <tbody id="itm-tb"></tbody>
         </table>
         <div id="itm-empty" style="text-align:center;padding:36px;color:var(--g4);display:none">ไม่พบรายการ</div>
+        <div id="itmPager" style="padding:10px 14px 4px;display:flex;justify-content:center"></div>
       </div>
     </div>
   </div>
@@ -1430,6 +1496,142 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
       </div>
     </div>
   </div>
+
+  <!-- ===== TAB: NOTES ===== -->
+  <div id="tnotes" class="tc">
+    <div style="display:grid;grid-template-columns:260px 1fr;gap:14px;align-items:start" class="resp-2col" id="notesLayout">
+
+      <!-- LEFT: Note list -->
+      <div class="card">
+        <div class="ch" style="flex-wrap:wrap;gap:6px">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <h2>Note</h2>
+          <div class="sp"></div>
+          <button class="btn bpu" style="padding:5px 12px;font-size:.78rem" onclick="noteNew()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            สร้าง Note
+          </button>
+        </div>
+        <div class="cb" style="padding:8px">
+          <input type="text" id="noteSearch" placeholder="🔍 ค้นหา Note..." oninput="renderNoteList()"
+            style="width:100%;font-size:.82rem;padding:6px 10px;margin-bottom:8px">
+          <div id="noteList" style="display:flex;flex-direction:column;gap:4px;max-height:65vh;overflow-y:auto"></div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Note editor -->
+      <div>
+        <!-- Empty state -->
+        <div id="noteEditorEmpty" class="card">
+          <div class="cb" style="text-align:center;padding:60px 24px;color:var(--g4)">
+            <div style="font-size:3rem;margin-bottom:12px">📝</div>
+            <div style="font-size:.92rem;font-weight:600;margin-bottom:6px">ยังไม่ได้เลือก Note</div>
+            <div style="font-size:.82rem">สร้าง Note ใหม่ หรือเลือก Note จากรายการทางซ้าย</div>
+          </div>
+        </div>
+
+        <!-- Editor card -->
+        <div id="noteEditorCard" class="card" style="display:none">
+          <div class="ch" style="flex-wrap:wrap;gap:6px">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            <input id="noteTitleInput" type="text" placeholder="ชื่อ Note..."
+              style="flex:1;min-width:120px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:5px;color:#fff;padding:4px 9px;font-size:.88rem;font-family:'Sarabun',sans-serif;font-weight:600"
+              oninput="noteMarkDirty()" onchange="noteAutoSave()">
+            <div class="sp"></div>
+            <!-- Pin toggle -->
+            <button id="notePinBtn" onclick="noteTogglePin()" title="ปักหมุด"
+              style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:5px;cursor:pointer;padding:4px 8px;color:rgba(255,255,255,.7);font-size:.8rem;display:flex;align-items:center;gap:4px;transition:all .18s">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg>
+              ปักหมุด
+            </button>
+            <!-- Color picker -->
+            <div style="position:relative">
+              <button id="noteColorBtn" onclick="toggleNoteColorPicker()" title="สีพื้นหลัง"
+                style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:5px;cursor:pointer;padding:4px 8px;color:rgba(255,255,255,.7);font-size:.8rem;display:flex;align-items:center;gap:4px;transition:all .18s">
+                <span id="noteColorDot" style="width:12px;height:12px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,.15);display:inline-block"></span>
+                สี
+              </button>
+              <div id="noteColorPicker" style="display:none;position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid var(--g3);border-radius:8px;padding:8px;box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:50;display:none">
+                <div style="font-size:.72rem;color:var(--g4);margin-bottom:6px;font-weight:600">สีพื้นหลัง Note</div>
+                <div id="noteColorSwatches" style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px"></div>
+              </div>
+            </div>
+            <!-- Auto-save indicator -->
+            <span id="noteAutoSaveIndicator" style="font-size:.7rem;color:rgba(255,255,255,.45);white-space:nowrap"></span>
+            <!-- Delete -->
+            <button onclick="noteDelete()" title="ลบ Note"
+              style="background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.35);border-radius:5px;cursor:pointer;padding:4px 8px;color:#fca5a5;font-size:.8rem;display:flex;align-items:center;gap:4px;transition:all .18s">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+              ลบ
+            </button>
+          </div>
+
+          <!-- Toolbar -->
+          <div id="noteToolbar" style="display:flex;gap:4px;flex-wrap:wrap;padding:8px 14px;border-bottom:1px solid var(--g3);background:var(--g1)">
+            <button onclick="noteFmt('bold')" title="ตัวหนา (Ctrl+B)" class="note-tb-btn"><b>B</b></button>
+            <button onclick="noteFmt('italic')" title="ตัวเอียง (Ctrl+I)" class="note-tb-btn"><i>I</i></button>
+            <button onclick="noteFmt('underline')" title="ขีดเส้นใต้ (Ctrl+U)" class="note-tb-btn"><u>U</u></button>
+            <button onclick="noteFmt('strikeThrough')" title="ขีดทับ" class="note-tb-btn"><s>S</s></button>
+            <span style="width:1px;height:20px;background:var(--g3);margin:0 2px;align-self:center"></span>
+            <button onclick="noteFmtBlock('h2')" title="หัวข้อใหญ่" class="note-tb-btn" style="font-size:.72rem;font-weight:700">H1</button>
+            <button onclick="noteFmtBlock('h3')" title="หัวข้อเล็ก" class="note-tb-btn" style="font-size:.72rem;font-weight:700">H2</button>
+            <button onclick="noteFmtBlock('p')" title="ย่อหน้าปกติ" class="note-tb-btn" style="font-size:.72rem">¶</button>
+            <span style="width:1px;height:20px;background:var(--g3);margin:0 2px;align-self:center"></span>
+            <button onclick="noteFmt('insertUnorderedList')" title="รายการจุด" class="note-tb-btn">•≡</button>
+            <button onclick="noteFmt('insertOrderedList')" title="รายการเลข" class="note-tb-btn">1≡</button>
+            <span style="width:1px;height:20px;background:var(--g3);margin:0 2px;align-self:center"></span>
+            <button onclick="noteFmt('justifyLeft')" title="ชิดซ้าย" class="note-tb-btn">◀≡</button>
+            <button onclick="noteFmt('justifyCenter')" title="กึ่งกลาง" class="note-tb-btn">≡≡</button>
+            <button onclick="noteFmt('justifyRight')" title="ชิดขวา" class="note-tb-btn">≡▶</button>
+            <span style="width:1px;height:20px;background:var(--g3);margin:0 2px;align-self:center"></span>
+            <select onchange="noteFmtFont(this.value);this.value=''" class="note-tb-btn" style="font-size:.72rem;padding:2px 5px;min-width:80px">
+              <option value="">ฟอนต์...</option>
+              <option value="Sarabun">Sarabun</option>
+              <option value="IBM Plex Mono">Mono</option>
+              <option value="Arial">Arial</option>
+              <option value="Tahoma">Tahoma</option>
+            </select>
+            <select onchange="noteFmtSize(this.value);this.value=''" class="note-tb-btn" style="font-size:.72rem;padding:2px 5px;min-width:60px">
+              <option value="">ขนาด...</option>
+              <option value="1">เล็กมาก</option>
+              <option value="2">เล็ก</option>
+              <option value="3">ปกติ</option>
+              <option value="4">ใหญ่</option>
+              <option value="5">ใหญ่มาก</option>
+            </select>
+            <span style="width:1px;height:20px;background:var(--g3);margin:0 2px;align-self:center"></span>
+            <label title="สีตัวอักษร" class="note-tb-btn" style="cursor:pointer;display:flex;align-items:center;gap:3px;padding:3px 6px">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+              <input type="color" value="#1e293b" oninput="noteFmtColor(this.value)" style="width:16px;height:14px;border:none;padding:0;background:none;cursor:pointer">
+            </label>
+            <label title="สีพื้นหลังข้อความ" class="note-tb-btn" style="cursor:pointer;display:flex;align-items:center;gap:3px;padding:3px 6px">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+              <input type="color" value="#fef9c3" oninput="noteFmtBg(this.value)" style="width:16px;height:14px;border:none;padding:0;background:none;cursor:pointer">
+            </label>
+            <span style="flex:1"></span>
+            <span id="noteWordCount" style="font-size:.7rem;color:var(--g4);align-self:center"></span>
+          </div>
+
+          <!-- Content area -->
+          <div id="noteEditor"
+            contenteditable="true"
+            spellcheck="false"
+            style="min-height:55vh;padding:16px 18px;font-family:'Sarabun',sans-serif;font-size:.92rem;line-height:1.7;outline:none;color:var(--g8);transition:background .3s"
+            oninput="noteOnInput()"
+            onkeydown="noteKeyDown(event)">
+          </div>
+
+          <!-- Footer: timestamps -->
+          <div id="noteFooter" style="padding:6px 18px;border-top:1px solid var(--g2);font-size:.7rem;color:var(--g4);display:flex;gap:12px;flex-wrap:wrap;background:var(--g1)">
+            <span id="noteCreatedAt"></span>
+            <span id="noteUpdatedAt"></span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
 <div class="modal-bg" id="modalEditItem">
   <div class="modal" style="width:480px">
     <div class="mh">
@@ -2412,7 +2614,26 @@ const ITEMS=[
 {n:'MT0052',d:'Amlopine 5 mg',bal:0,uom:'TABLETS',min:null,max:null,price:0},
 {n:'MT0053',d:'Immucept 500 mg',bal:0,uom:'TABLETS',min:null,max:null,price:0},
 {n:'MA0003',d:'Iliadin Drop 0.05% 10 ml.',bal:0,uom:'PIECE',min:null,max:null,price:0},
-{n:'MS2110',d:'Brillant blue Solution 0.05% รอขอItem No.',bal:0,uom:'PIECE',min:null,max:null,price:0}
+{n:'MS2110',d:'Brillant blue Solution 0.05% รอขอItem No.',bal:0,uom:'PIECE',min:null,max:null,price:0},
+{n:'ST1001',d:'กระดาษถ่ายเอกสาร A4 70/500',bal:0,uom:'REAM',min:null,max:null,price:0},
+{n:'ST1002',d:'Post-it 3M No.654-5AP 3x3นิ้ว คละสีพาสเทล',bal:0,uom:'PACK',min:null,max:null,price:0},
+{n:'ST1003',d:'เทปใส หลุยส์ 3/4" x36หลา แกน 3"',bal:0,uom:'PIECE',min:null,max:null,price:0},
+{n:'ST1004',d:'แท่นตัดเทป ตราม้า H-15 (ใช้กับแกน 3")',bal:0,uom:'PIECE',min:null,max:null,price:0},
+{n:'ST1005',d:'โพสต์-อิท แฟล็กซ์ 3M 684SH (sign here)',bal:0,uom:'PACK',min:null,max:null,price:0},
+{n:'ST1006',d:'ปอมีดตัดเตอร์ Orca A-100 9 มม. 45องศา (1x6)',bal:0,uom:'PACK',min:null,max:null,price:0},
+{n:'ST1007',d:'ใบมีดบรรทัดเหล็ก 12"',bal:0,uom:'PIECE',min:null,max:null,price:0},
+{n:'ST1008',d:'กรรไกร ตราช้าง โอเอฟอี 0265/1265 6.5 นิ้ว',bal:0,uom:'PIECE',min:null,max:null,price:0},
+{n:'ST1009',d:'กระดาษถ่ายเอกสาร วีนัส No.04 80/500 A4 (ชมพู)',bal:0,uom:'REAM',min:null,max:null,price:0},
+{n:'ST1010',d:'กระดาษถ่ายเอกสาร วีนัส No.02 80/500 A4 (เขียว)',bal:0,uom:'REAM',min:null,max:null,price:0},
+{n:'ST1011',d:'ถ่าน ALKALINE Panasonic AA (1x4ก้อน)',bal:0,uom:'PACK',min:null,max:null,price:0},
+{n:'ST1012',d:'ถ่าน ALKALINE Panasonic AAA (1x4ก้อน)',bal:0,uom:'PACK',min:null,max:null,price:0},
+{n:'ST1013',d:'ถ่านไฟฉาย Panasonic NEO AAA (1x4ก้อน)',bal:0,uom:'PACK',min:null,max:null,price:0},
+{n:'ST1014',d:'ปากกาลูกลื่น 0.7mm ควอนตั้ม หมึกน้ำเงิน Ref.0201-0721',bal:0,uom:'PIECE',min:null,max:null,price:0},
+{n:'ST1015',d:'ปากกาลูกลื่น 0.7mm ควอนตั้ม หมึกสีแดง',bal:0,uom:'PIECE',min:null,max:null,price:0},
+{n:'ST1016',d:'ป้ายสติ๊กเกอร์ ตราม้า A12',bal:0,uom:'PACK',min:null,max:null,price:0},
+{n:'ST1017',d:'ป้ายสติ๊กเกอร์ ตราม้า A9',bal:0,uom:'PACK',min:null,max:null,price:0},
+{n:'ST1018',d:'ลวดเย็บกระดาษ (MAX Stapes) No.10-1M',bal:0,uom:'BOX',min:null,max:null,price:0},
+{n:'ST1019',d:'ลวดเสียบกระดาษ ตราม้า No.1',bal:0,uom:'BOX',min:null,max:null,price:0}
 ];
 
 // Load from localStorage — orItems คือ source of truth
@@ -4927,8 +5148,8 @@ document.addEventListener('DOMContentLoaded', () => {
    TABS
 ══════════════════════════════════════════ */
 function swTab(n) {
-  const names = ['entry','tpl','items','history','log'];
-  const idMap = {entry:'tentry',tpl:'ttpl',items:'titems',history:'thistory',log:'tlog'};
+  const names = ['entry','tpl','items','history','log','notes'];
+  const idMap = {entry:'tentry',tpl:'ttpl',items:'titems',history:'thistory',log:'tlog',notes:'tnotes'};
   document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('ac', names[i] === n));
   document.querySelectorAll('.tc').forEach(c => c.classList.remove('ac'));
   const el = document.getElementById(idMap[n]);
@@ -4937,6 +5158,7 @@ function swTab(n) {
   if (n === 'tpl') { renderDocGrid(); updateDocSelects(); }
   if (n === 'items') rItems();
   if (n === 'log') renderLog();
+  if (n === 'notes') { renderNoteList(); }
 }
 
 /* ══════════════════════════════════════════
@@ -6413,29 +6635,68 @@ function saveEditItem() {
     // Edit
     const idx = ITEMS.findIndex(i => i.n === _editItemCode);
     if (idx < 0) return;
+    const oldDesc = ITEMS[idx].d || '';
     if (code !== _editItemCode) {
       const dup = ITEMS.find((i,ii) => i.n === code && ii !== idx);
       if (dup) { warn.style.display=''; warn.textContent='รหัส '+code+' มีอยู่แล้ว: "'+dup.d+'"'; return; }
     }
     ITEMS[idx] = {...ITEMS[idx], n:code, d:desc, uom, min, max, bal:newBal, updatedAt:nowTs, updatedRaw:nowRaw, isNew:false};
 
-    // ถ้า Code เปลี่ยน → ย้าย history ทั้งหมดไป code ใหม่
-    if (code !== _editItemCode) {
-      let movedCount = 0;
+    const codeChanged = code !== _editItemCode;
+    const descChanged = desc !== oldDesc;
+    let movedCount = 0;
+
+    // อัปเดต history: code และ/หรือ desc
+    if (codeChanged || descChanged) {
       saved = saved.map(s => {
-        if ((s.item_no||'').trim().toUpperCase() === _editItemCode.toUpperCase()) {
-          movedCount++;
-          return {...s, item_no: code};
-        }
-        return s;
+        const sCode = (s.item_no||'').trim().toUpperCase();
+        if (sCode !== _editItemCode.toUpperCase()) return s;
+        movedCount++;
+        const patch = {};
+        if (codeChanged) patch.item_no = code;
+        if (descChanged) { patch.desc = desc; patch.origName = desc; }
+        return {...s, ...patch};
       });
       localStorage.setItem('orSE', JSON.stringify(saved));
       if (window._fbWrite) window._fbWrite('orSE', saved);
-      if (movedCount > 0) showT(`✅ ย้าย ${movedCount} รายการประวัติ ${_editItemCode} → ${code} แล้ว`, 'ok');
+    }
+
+    // อัปเดต Template (doctors): ทุก doc ที่มี item code นี้ → แก้ n และ d
+    let tplUpdated = 0;
+    doctors.forEach(doc => {
+      if (!doc.items) return;
+      let changed = false;
+      doc.items = doc.items.map(it => {
+        if ((it.n||'').trim().toUpperCase() !== _editItemCode.toUpperCase()) return it;
+        const upd = {...it};
+        if (codeChanged) upd.n = code;
+        if (descChanged) upd.d = desc;
+        changed = true;
+        tplUpdated++;
+        return upd;
+      });
+      if (changed) { /* will be saved via saveDocs() below */ }
+    });
+    if (tplUpdated > 0) {
+      saveDocs();
+      renderDocGrid();
+      if (typeof renderTplItems === 'function' && editDocId) {
+        const curDoc = doctors.find(d => d.id === editDocId);
+        if (curDoc) renderTplItems(curDoc);
+      }
+    }
+
+    // Toast summary
+    if (codeChanged && movedCount > 0) {
+      showT(`✅ ย้าย ${movedCount} รายการประวัติ + ${tplUpdated} รายการ Template แล้ว`, 'ok');
+    } else if (codeChanged) {
+      showT(`✅ เปลี่ยน Code เป็น ${code} แล้ว (Template อัปเดต ${tplUpdated} รายการ)`, 'ok');
+    } else if (descChanged && tplUpdated > 0) {
+      showT(`✅ แก้ไขชื่อรายการ — อัปเดต Template ${tplUpdated} รายการ + ประวัติ ${movedCount} รายการแล้ว`, 'ok');
     } else {
       showT('แก้ไข '+code+' แล้ว', 'ok');
     }
-    addLog('edit', `แก้ไข ${_editItemCode} → ${code} — ${desc}`);
+    addLog('edit', `แก้ไข ${_editItemCode}${codeChanged?' → '+code:''} — ${desc}${tplUpdated>0?' (Template +'+tplUpdated+')':''}`);
   }
   if (window.ITOK) window.ITOK = ITEMS.map(i => ({...i, tk: tok(i.d+' '+i.n)}));
   saveItems();
@@ -6482,6 +6743,10 @@ function sortItems(key) {
   rItems();
 }
 
+// ── Items pagination state ──
+let _itmPage = 1;
+const ITM_PER_PAGE = 10;
+
 function rItems() {
   const q      = (document.getElementById('itmQ')?.value    || '').toLowerCase();
   const uom    = document.getElementById('itmUom')?.value   || '';
@@ -6508,6 +6773,8 @@ function rItems() {
   const showEl = document.getElementById('nc-showing');
   if (showEl) showEl.textContent = (q||uom||prefix) ? ('แสดง '+rows.length+' รายการ') : '';
 
+  // reset ไป page 1 ทุกครั้งที่ filter เปลี่ยน
+  _itmPage = 1;
   renderRecentItems();
   renderItemsAll(rows);
 }
@@ -6564,8 +6831,16 @@ function renderItemsAll(items) {
   const tb = document.getElementById('itm-tb');
   const em = document.getElementById('itm-empty');
   if (!tb || !em) return; // tab Items ยังไม่ได้เปิด
-  if (!items || !items.length) { tb.innerHTML = ''; em.style.display = ''; return; }
+  if (!items || !items.length) { tb.innerHTML = ''; em.style.display = ''; _renderItmPager(0,0,0); return; }
   em.style.display = 'none';
+  // ── Pagination: slice rows ──
+  const totalRows  = items.length;
+  const totalPages = Math.ceil(totalRows / ITM_PER_PAGE);
+  _itmPage = Math.max(1, Math.min(_itmPage, totalPages));
+  const startIdx   = (_itmPage - 1) * ITM_PER_PAGE;
+  items = items.slice(startIdx, startIdx + ITM_PER_PAGE);
+  // render pager
+  _renderItmPager(totalRows, totalPages, startIdx);
 
 
   // ── คำนวณยอดยกมาและคงเหลือจริงจาก saved ──
@@ -6619,7 +6894,7 @@ function renderItemsAll(items) {
     const tmTip = (tm.recv||tm.issue) ? `ยกมา:${yodYokMa} รับ:+${tm.recv} จ่าย:-${tm.issue}` : `ยกมา:${yodYokMa} ยังไม่มีรายการเดือนนี้`;
 
     h += `<tr style="${rowBg}">
-      <td style="color:var(--g4);font-size:.72rem">${idx+1}</td>
+      <td style="color:var(--g4);font-size:.72rem">${startIdx+idx+1}</td>
       <td>
         <span onclick='openEditItem("${code}")' title="แก้ไข"
           style="font-family:monospace;font-size:.77rem;font-weight:700;color:var(--primary);cursor:pointer;padding:2px 5px;border-radius:3px"
@@ -6648,6 +6923,65 @@ function renderItemsAll(items) {
     </tr>`;
   });
   tb.innerHTML = h;
+}
+
+function _renderItmPager(total, totalPages, startIdx) {
+  let pg = document.getElementById('itmPager');
+  if (!pg) return;
+  if (total === 0 || totalPages <= 1) { pg.innerHTML = ''; return; }
+  const cur = _itmPage;
+  const endIdx = Math.min(startIdx + ITM_PER_PAGE, total);
+  let btns = '';
+  // prev
+  btns += `<button onclick="_itmGoPage(${cur-1})" ${cur===1?'disabled':''} style="padding:4px 10px;border:1.5px solid var(--g3);border-radius:6px;background:#fff;cursor:pointer;font-size:.78rem;font-family:'Sarabun',sans-serif;${cur===1?'opacity:.4;cursor:not-allowed':''}">‹ ก่อนหน้า</button>`;
+  // page numbers
+  const maxBtn = 7;
+  let pages = [];
+  if (totalPages <= maxBtn) {
+    for (let i=1;i<=totalPages;i++) pages.push(i);
+  } else {
+    pages = [1];
+    if (cur > 3) pages.push('...');
+    for (let i=Math.max(2,cur-1);i<=Math.min(totalPages-1,cur+1);i++) pages.push(i);
+    if (cur < totalPages-2) pages.push('...');
+    pages.push(totalPages);
+  }
+  pages.forEach(p => {
+    if (p==='...') {
+      btns += `<span style="padding:4px 6px;font-size:.78rem;color:var(--g4)">…</span>`;
+    } else {
+      const active = p===cur;
+      btns += `<button onclick="_itmGoPage(${p})" style="padding:4px 10px;border:1.5px solid ${active?'var(--primary)':'var(--g3)'};border-radius:6px;background:${active?'var(--primary)':'#fff'};color:${active?'#fff':'var(--g8)'};cursor:pointer;font-size:.78rem;font-weight:${active?'700':'400'};font-family:'Sarabun',sans-serif">${p}</button>`;
+    }
+  });
+  // next
+  btns += `<button onclick="_itmGoPage(${cur+1})" ${cur===totalPages?'disabled':''} style="padding:4px 10px;border:1.5px solid var(--g3);border-radius:6px;background:#fff;cursor:pointer;font-size:.78rem;font-family:'Sarabun',sans-serif;${cur===totalPages?'opacity:.4;cursor:not-allowed':''}">ถัดไป ›</button>`;
+  pg.innerHTML = `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+    <span style="font-size:.75rem;color:var(--g4);margin-right:4px">${startIdx+1}–${endIdx} จาก ${total} รายการ</span>
+    ${btns}
+  </div>`;
+}
+
+function _itmGoPage(p) {
+  _itmPage = p;
+  // re-run rItems กับ filter เดิม แต่ไม่ reset page
+  const q      = (document.getElementById('itmQ')?.value    || '').toLowerCase();
+  const uom    = document.getElementById('itmUom')?.value   || '';
+  const prefix = document.getElementById('itmPrefix')?.value || '';
+  let rows = ITEMS.slice();
+  if (q)      rows = rows.filter(i => i.n.toLowerCase().includes(q) || i.d.toLowerCase().includes(q));
+  if (uom)    rows = rows.filter(i => (i.uom||'').toUpperCase() === uom.toUpperCase());
+  if (prefix) rows = rows.filter(i => i.n.toUpperCase().startsWith(prefix));
+  const {key, asc} = _itmSort;
+  rows.sort((a,b) => {
+    let va=a[key],vb=b[key];
+    if(typeof va==='string')va=va.toLowerCase();
+    if(typeof vb==='string')vb=vb.toLowerCase();
+    if(va<vb)return asc?-1:1;if(va>vb)return asc?1:-1;return 0;
+  });
+  renderItemsAll(rows);
+  // scroll to table top
+  document.getElementById('itm-tb')?.closest('table')?.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 /* keep alias for any remaining calls */
@@ -7266,6 +7600,9 @@ function _updateLogBadge(count) {
   if (badge) badge.textContent = count > 0 ? count : '';
 }
 
+const LOG_PER_PAGE = 50;
+let _logPage = 1;
+
 function renderLog() {
   const tbody  = document.getElementById('logTbody');
   const empty  = document.getElementById('logEmpty');
@@ -7310,14 +7647,25 @@ function renderLog() {
   if (!filtered.length) {
     tbody.innerHTML = '';
     if (empty) empty.style.display = '';
+    _renderLogPagination(0, 0);
     return;
   }
   if (empty) empty.style.display = 'none';
 
-  tbody.innerHTML = filtered.map((l, i) => {
+  // Pagination
+  const totalPages = Math.ceil(filtered.length / LOG_PER_PAGE);
+  if (_logPage > totalPages) _logPage = totalPages;
+  if (_logPage < 1) _logPage = 1;
+
+  const start = (_logPage - 1) * LOG_PER_PAGE;
+  const end   = Math.min(start + LOG_PER_PAGE, filtered.length);
+  const paged = filtered.slice(start, end);
+
+  tbody.innerHTML = paged.map((l, i) => {
+    const rowNum = filtered.length - (start + i); // เลขจากมากไปน้อย
     const s = LOG_STYLES[l.action] || { label: l.action, icon:'•', bg:'#f1f5f9', color:'#475569', border:'#e2e8f0' };
     return `<tr style="background:${s.bg}">
-      <td style="color:var(--g4);font-size:.72rem;padding-left:14px">${filtered.length - i}</td>
+      <td style="color:var(--g4);font-size:.72rem;padding-left:14px">${rowNum}</td>
       <td style="font-size:.72rem;color:var(--g6);font-family:monospace;white-space:nowrap">${l.ts}</td>
       <td>
         <span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;font-size:.72rem;font-weight:600;background:#ede9fe;color:#5b21b6">
@@ -7333,6 +7681,77 @@ function renderLog() {
       <td style="font-size:.79rem;color:var(--g8)">${esc(l.detail||'')}</td>
     </tr>`;
   }).join('');
+
+  _renderLogPagination(filtered.length, totalPages);
+}
+
+function _renderLogPagination(total, totalPages) {
+  const info = document.getElementById('logPageInfo');
+  const btns = document.getElementById('logPageBtns');
+  const wrap = document.getElementById('logPagination');
+  if (!info || !btns) return;
+
+  if (total === 0 || totalPages <= 1) {
+    if (wrap) wrap.style.display = total === 0 ? 'none' : 'flex';
+    info.textContent = total > 0 ? `ทั้งหมด ${total} รายการ` : '';
+    btns.innerHTML = '';
+    return;
+  }
+
+  if (wrap) wrap.style.display = 'flex';
+  const start = (_logPage - 1) * LOG_PER_PAGE + 1;
+  const end   = Math.min(_logPage * LOG_PER_PAGE, total);
+  info.textContent = `แสดง ${start}–${end} จาก ${total} รายการ · หน้า ${_logPage}/${totalPages}`;
+
+  // Build page buttons — show at most 7 buttons with ellipsis
+  const btnStyle = (active) =>
+    `padding:4px 10px;border-radius:5px;border:1.5px solid ${active?'var(--primary)':'var(--g3)'};` +
+    `background:${active?'var(--primary)':'#fff'};color:${active?'#fff':'var(--g6)'};` +
+    `cursor:${active?'default':'pointer'};font-size:.78rem;font-weight:600;font-family:'Sarabun',sans-serif;transition:all .15s;`;
+
+  let html = '';
+
+  // Prev
+  html += `<button style="${btnStyle(false)}opacity:${_logPage===1?'.4':'1'}" ${_logPage===1?'disabled':''} onclick="logGoPage(${_logPage-1})">‹ ก่อน</button>`;
+
+  // Page numbers
+  const pages = _buildPageNums(_logPage, totalPages);
+  pages.forEach(p => {
+    if (p === '…') {
+      html += `<span style="padding:4px 6px;font-size:.78rem;color:var(--g4)">…</span>`;
+    } else {
+      html += `<button style="${btnStyle(p===_logPage)}" onclick="logGoPage(${p})">${p}</button>`;
+    }
+  });
+
+  // Next
+  html += `<button style="${btnStyle(false)}opacity:${_logPage===totalPages?'.4':'1'}" ${_logPage===totalPages?'disabled':''} onclick="logGoPage(${_logPage+1})">ถัดไป ›</button>`;
+
+  btns.innerHTML = html;
+}
+
+function _buildPageNums(cur, total) {
+  if (total <= 7) return Array.from({length: total}, (_, i) => i+1);
+  const pages = [];
+  if (cur <= 4) {
+    for (let i=1; i<=5; i++) pages.push(i);
+    pages.push('…'); pages.push(total);
+  } else if (cur >= total-3) {
+    pages.push(1); pages.push('…');
+    for (let i=total-4; i<=total; i++) pages.push(i);
+  } else {
+    pages.push(1); pages.push('…');
+    for (let i=cur-1; i<=cur+1; i++) pages.push(i);
+    pages.push('…'); pages.push(total);
+  }
+  return pages;
+}
+
+function logGoPage(p) {
+  _logPage = p;
+  renderLog();
+  // scroll ตารางกลับขึ้นบน
+  document.getElementById('tlog')?.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 function clearActivityLog() {
@@ -8867,5 +9286,311 @@ function confirmSaveAsTemplate() {
     </div>
   </div>
 </div>
+
+<script>
+/* ════════════════════════════════════════════
+   NOTES SYSTEM
+════════════════════════════════════════════ */
+const NOTE_KEY = 'orNotes';
+const NOTE_COLORS = [
+  {hex:'#ffffff', label:'ขาว'},
+  {hex:'#fef9c3', label:'เหลือง'},
+  {hex:'#fce7f3', label:'ชมพู'},
+  {hex:'#ede9fe', label:'ม่วง'},
+  {hex:'#dbeafe', label:'น้ำเงิน'},
+  {hex:'#dcfce7', label:'เขียว'},
+  {hex:'#ffedd5', label:'ส้ม'},
+  {hex:'#f1f5f9', label:'เทา'},
+  {hex:'#fdf2f8', label:'ม่วงอ่อน'},
+  {hex:'#ecfdf5', label:'เขียวมิ้นต์'},
+  {hex:'#fff7ed', label:'ครีม'},
+  {hex:'#f0f9ff', label:'ฟ้าอ่อน'},
+];
+
+let _notes = [];
+let _curNoteId = null;
+let _noteDirty = false;
+let _noteAutoSaveTimer = null;
+
+function _loadNotes() {
+  try { _notes = JSON.parse(localStorage.getItem(NOTE_KEY) || '[]'); } catch { _notes = []; }
+}
+function _saveNotes() {
+  localStorage.setItem(NOTE_KEY, JSON.stringify(_notes));
+  if (window._fbWrite) window._fbWrite(NOTE_KEY, _notes);
+}
+
+// ── Render note list ──
+function renderNoteList() {
+  _loadNotes();
+  const q = (document.getElementById('noteSearch')?.value || '').toLowerCase();
+  const list = document.getElementById('noteList');
+  if (!list) return;
+
+  // Sort: pinned first, then by updatedAt desc
+  let notes = _notes.slice().sort((a,b) => {
+    if (a.pinned && !b.pinned) return -1;
+    if (!a.pinned && b.pinned) return 1;
+    return (b.updatedRaw||0) - (a.updatedRaw||0);
+  });
+
+  if (q) {
+    notes = notes.filter(n =>
+      (n.title||'').toLowerCase().includes(q) ||
+      (n.contentText||'').toLowerCase().includes(q)
+    );
+  }
+
+  if (!notes.length) {
+    list.innerHTML = `<div style="text-align:center;padding:32px 12px;color:var(--g4);font-size:.82rem">
+      ${q ? '🔍 ไม่พบ Note ที่ค้นหา' : '📝 ยังไม่มี Note<br><small>กดปุ่ม "สร้าง Note" เพื่อเริ่มต้น</small>'}
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = notes.map(n => {
+    const isActive = n.id === _curNoteId;
+    const preview  = (n.contentText || '').substring(0, 60) || '(ว่างเปล่า)';
+    const updated  = n.updatedAt ? n.updatedAt : '';
+    const dotColor = n.color && n.color !== '#ffffff' ? n.color : '';
+    return `<div class="note-list-item ${isActive?'active':''}" onclick="noteOpen('${n.id}')"
+      style="${n.color && n.color!=='#ffffff'?'border-left:4px solid '+n.color+';':''}">
+      ${n.pinned ? '<span class="note-pin-dot" title="ปักหมุด">📌</span>' : ''}
+      <div class="note-list-title">${esc(n.title||'(ไม่มีชื่อ)')}</div>
+      <div class="note-list-preview">${esc(preview)}</div>
+      <div class="note-list-meta">${updated}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Open a note ──
+function noteOpen(id) {
+  // Auto-save current before switching
+  if (_noteDirty && _curNoteId) noteAutoSave();
+
+  _curNoteId = id;
+  _loadNotes();
+  const note = _notes.find(n => n.id === id);
+  if (!note) return;
+
+  document.getElementById('noteEditorEmpty').style.display = 'none';
+  document.getElementById('noteEditorCard').style.display = '';
+
+  document.getElementById('noteTitleInput').value = note.title || '';
+  const editor = document.getElementById('noteEditor');
+  editor.innerHTML = note.content || '';
+  editor.setAttribute('data-placeholder', 'เริ่มพิมพ์ Note...');
+  editor.style.background = note.color || '#ffffff';
+
+  // Update color dot
+  document.getElementById('noteColorDot').style.background = note.color || '#ffffff';
+
+  // Pin button state
+  const pinBtn = document.getElementById('notePinBtn');
+  if (pinBtn) {
+    pinBtn.style.background = note.pinned ? 'rgba(255,255,255,.35)' : 'rgba(255,255,255,.12)';
+    pinBtn.style.color = note.pinned ? '#fff' : 'rgba(255,255,255,.7)';
+  }
+
+  // Footer
+  if (note.createdAt) document.getElementById('noteCreatedAt').textContent = '🕐 สร้าง: ' + note.createdAt;
+  if (note.updatedAt) document.getElementById('noteUpdatedAt').textContent = '✏️ แก้ล่าสุด: ' + note.updatedAt;
+
+  _noteDirty = false;
+  document.getElementById('noteAutoSaveIndicator').textContent = '';
+  noteUpdateWordCount();
+  renderNoteList();
+}
+
+// ── Create new note ──
+function noteNew() {
+  if (_noteDirty && _curNoteId) noteAutoSave();
+
+  const id = 'n_' + Date.now();
+  const now = new Date().toLocaleString('th-TH');
+  const note = {
+    id, title: '', content: '', contentText: '',
+    color: '#ffffff', pinned: false,
+    createdAt: now, updatedAt: now,
+    createdRaw: Date.now(), updatedRaw: Date.now()
+  };
+  _loadNotes();
+  _notes.unshift(note);
+  _saveNotes();
+  noteOpen(id);
+  // Focus title
+  setTimeout(() => document.getElementById('noteTitleInput')?.focus(), 80);
+}
+
+// ── Mark dirty & auto-save ──
+function noteMarkDirty() {
+  _noteDirty = true;
+  document.getElementById('noteAutoSaveIndicator').textContent = '⬤ ยังไม่บันทึก';
+}
+
+function noteOnInput() {
+  noteMarkDirty();
+  noteUpdateWordCount();
+  // debounce auto-save 1.5s
+  clearTimeout(_noteAutoSaveTimer);
+  _noteAutoSaveTimer = setTimeout(noteAutoSave, 1500);
+}
+
+function noteAutoSave() {
+  if (!_curNoteId || !_noteDirty) return;
+  _loadNotes();
+  const idx = _notes.findIndex(n => n.id === _curNoteId);
+  if (idx < 0) return;
+
+  const editor = document.getElementById('noteEditor');
+  const titleEl = document.getElementById('noteTitleInput');
+  const now = new Date().toLocaleString('th-TH');
+
+  _notes[idx].title       = (titleEl?.value || '').trim();
+  _notes[idx].content     = editor?.innerHTML || '';
+  _notes[idx].contentText = (editor?.innerText || '').trim();
+  _notes[idx].updatedAt   = now;
+  _notes[idx].updatedRaw  = Date.now();
+
+  _saveNotes();
+  _noteDirty = false;
+
+  const ind = document.getElementById('noteAutoSaveIndicator');
+  if (ind) { ind.textContent = '✓ บันทึกแล้ว'; setTimeout(() => { if(ind) ind.textContent=''; }, 2000); }
+
+  document.getElementById('noteUpdatedAt').textContent = '✏️ แก้ล่าสุด: ' + now;
+  renderNoteList();
+}
+
+// ── Delete ──
+function noteDelete() {
+  if (!_curNoteId) return;
+  _loadNotes();
+  const note = _notes.find(n => n.id === _curNoteId);
+  const title = note?.title || '(ไม่มีชื่อ)';
+  if (!confirm(`ลบ Note "${title}" ? ไม่สามารถกู้คืนได้`)) return;
+  _notes = _notes.filter(n => n.id !== _curNoteId);
+  _saveNotes();
+  _curNoteId = null;
+  _noteDirty = false;
+  document.getElementById('noteEditorEmpty').style.display = '';
+  document.getElementById('noteEditorCard').style.display = 'none';
+  renderNoteList();
+  showT('🗑️ ลบ Note แล้ว', 'ok');
+}
+
+// ── Toggle Pin ──
+function noteTogglePin() {
+  if (!_curNoteId) return;
+  _loadNotes();
+  const idx = _notes.findIndex(n => n.id === _curNoteId);
+  if (idx < 0) return;
+  _notes[idx].pinned = !_notes[idx].pinned;
+  _saveNotes();
+  const pinBtn = document.getElementById('notePinBtn');
+  if (pinBtn) {
+    pinBtn.style.background = _notes[idx].pinned ? 'rgba(255,255,255,.35)' : 'rgba(255,255,255,.12)';
+    pinBtn.style.color = _notes[idx].pinned ? '#fff' : 'rgba(255,255,255,.7)';
+  }
+  renderNoteList();
+  showT(_notes[idx].pinned ? '📌 ปักหมุดแล้ว' : '📌 เลิกปักหมุด', 'ok');
+}
+
+// ── Color picker ──
+function toggleNoteColorPicker() {
+  const picker = document.getElementById('noteColorPicker');
+  if (!picker) return;
+  const isOpen = picker.style.display !== 'none';
+  if (!isOpen) {
+    // Build swatches
+    const grid = document.getElementById('noteColorSwatches');
+    grid.innerHTML = NOTE_COLORS.map(c =>
+      `<div title="${c.label}" onclick="applyNoteColor('${c.hex}')"
+        style="width:22px;height:22px;border-radius:4px;background:${c.hex};border:2px solid ${c.hex==='#ffffff'?'#e2e8f0':'transparent'};cursor:pointer;transition:transform .12s"
+        onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform=''"></div>`
+    ).join('');
+  }
+  picker.style.display = isOpen ? 'none' : '';
+}
+
+function applyNoteColor(hex) {
+  if (!_curNoteId) return;
+  _loadNotes();
+  const idx = _notes.findIndex(n => n.id === _curNoteId);
+  if (idx < 0) return;
+  _notes[idx].color = hex;
+  _saveNotes();
+  document.getElementById('noteEditor').style.background = hex;
+  document.getElementById('noteColorDot').style.background = hex;
+  document.getElementById('noteColorPicker').style.display = 'none';
+  renderNoteList();
+}
+
+// Close color picker when clicking outside
+document.addEventListener('click', e => {
+  const picker = document.getElementById('noteColorPicker');
+  const btn    = document.getElementById('noteColorBtn');
+  if (picker && btn && !picker.contains(e.target) && !btn.contains(e.target)) {
+    picker.style.display = 'none';
+  }
+});
+
+// ── Formatting helpers ──
+function noteFmt(cmd) {
+  document.getElementById('noteEditor')?.focus();
+  document.execCommand(cmd, false, null);
+}
+function noteFmtBlock(tag) {
+  document.getElementById('noteEditor')?.focus();
+  document.execCommand('formatBlock', false, tag);
+}
+function noteFmtFont(font) {
+  if (!font) return;
+  document.getElementById('noteEditor')?.focus();
+  document.execCommand('fontName', false, font);
+}
+function noteFmtSize(size) {
+  if (!size) return;
+  document.getElementById('noteEditor')?.focus();
+  document.execCommand('fontSize', false, size);
+}
+function noteFmtColor(color) {
+  document.getElementById('noteEditor')?.focus();
+  document.execCommand('foreColor', false, color);
+}
+function noteFmtBg(color) {
+  document.getElementById('noteEditor')?.focus();
+  document.execCommand('hiliteColor', false, color);
+}
+
+// ── Word count ──
+function noteUpdateWordCount() {
+  const editor = document.getElementById('noteEditor');
+  const el = document.getElementById('noteWordCount');
+  if (!editor || !el) return;
+  const text = (editor.innerText || '').trim();
+  const chars = text.length;
+  const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
+  el.textContent = chars ? `${chars} ตัวอักษร · ${words} คำ` : '';
+}
+
+// ── Keyboard shortcuts in editor ──
+function noteKeyDown(e) {
+  noteMarkDirty();
+  // Ctrl+S = save
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault();
+    noteAutoSave();
+  }
+  // Tab = indent
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    document.execCommand('insertHTML', false, '&nbsp;&nbsp;&nbsp;&nbsp;');
+  }
+}
+
+// ── Init: load notes ──
+_loadNotes();
+</script>
 </body>
 </html>

@@ -587,14 +587,6 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
 .note-list-item .note-pin-dot{position:absolute;top:7px;right:8px;font-size:.75rem}
 #noteEditor h2{font-size:1.18rem;font-weight:700;color:var(--primary);margin:10px 0 4px}
 #noteEditor h3{font-size:1rem;font-weight:700;color:var(--primary-m);margin:8px 0 3px}
-#noteEditor h4{font-size:.9rem;font-weight:700;color:var(--g6);margin:6px 0 2px}
-#noteEditor blockquote{border-left:3px solid var(--primary-l);padding:4px 12px;color:var(--g6);background:var(--primary-b);border-radius:0 4px 4px 0;margin:6px 0}
-#noteEditor pre{background:#1e293b;color:#e2e8f0;padding:10px 14px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:.8rem;overflow-x:auto;margin:6px 0}
-#noteEditor table{border-collapse:collapse;width:100%;margin:8px 0}
-#noteEditor table td,#noteEditor table th{border:1px solid #e2e8f0;padding:6px 10px;font-size:.82rem}
-#noteEditor table th{background:#f1f5f9;font-weight:600}
-#noteEditor a{color:var(--primary);text-decoration:underline}
-#noteEditor hr{border:none;border-top:2px solid #e2e8f0;margin:12px 0}
 #noteEditor p{margin:4px 0}
 #noteEditor ul,#noteEditor ol{padding-left:20px;margin:4px 0}
 #noteEditor li{margin:2px 0}
@@ -619,40 +611,88 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
     const app  = initializeApp(firebaseConfig);
     const db   = getFirestore(app);
     const auth = getAuth(app);
-    const DOC  = doc(db, 'stockcard', 'data');  // single document for all app data
+
+    // ── แยก key ที่อาจใหญ่มากออกเป็น document ของตัวเอง ──
+    // key ใหญ่ (orSE, orItems, orActivityLog, orNotes) → collection 'stockcard_kv', doc = key
+    // key เล็ก (settings, PIN ฯลฯ) → document เดิม 'stockcard/data' (merge)
+    const BIG_KEYS = new Set(['orSE','orItems','orNotes']);
+    const DOC_MAIN = doc(db, 'stockcard', 'data');  // สำหรับ key เล็ก
+    function _kvDoc(key) { return doc(db, 'stockcard_kv', key); }  // สำหรับ key ใหญ่
 
     // ── Public helpers exposed to global scope ──
     window._fbReady = false;
     window._fbPending = {};  // buffer writes before auth ready
-    // ── Helper: ลบ undefined ออกจากข้อมูลก่อนส่ง Firestore ──
+
     function _sanitize(val) {
       return JSON.parse(JSON.stringify(val, (k, v) => v === undefined ? null : v));
+    }
+
+    // ── ตรวจขนาดก่อนเขียน (rough estimate) ──
+    function _estimateBytes(val) {
+      try { return new TextEncoder().encode(JSON.stringify(val)).length; } catch { return 0; }
     }
 
     window._fbWrite = async function(key, val) {
       if (!window._fbReady) { window._fbPending[key] = val; return; }
       try {
-        const patch = {};
-        patch[key] = _sanitize(val);
-        await setDoc(DOC, patch, { merge: true });
+        const clean = _sanitize(val);
+        const bytes = _estimateBytes(clean);
+        // warn ถ้าใกล้ limit (900KB)
+        if (bytes > 900_000) {
+          console.warn(`[FB] ${key} ขนาด ${(bytes/1024).toFixed(0)}KB ใกล้เกิน 1MB limit`);
+        }
+        if (BIG_KEYS.has(key)) {
+          // เขียนเป็น document แยก: { value: [...] }
+          await setDoc(_kvDoc(key), { value: clean });
+        } else {
+          const patch = {};
+          patch[key] = clean;
+          await setDoc(DOC_MAIN, patch, { merge: true });
+        }
         const dot = document.getElementById('fbSyncDot');
-        if (dot) { dot.style.background='#22c55e'; setTimeout(()=>dot.style.background='#22c55e',1000); }
-      } catch(e) { console.warn('FB write', key, e); }
+        if (dot) { dot.style.background='#22c55e'; }
+      } catch(e) {
+        console.warn('FB write', key, e);
+        // แจ้ง user เฉพาะ quota error
+        if (e.message && e.message.includes('maximum allowed size')) {
+          const dot = document.getElementById('fbSyncDot');
+          if (dot) { dot.style.background='#ef4444'; dot.title='Firebase: ข้อมูลเกิน 1MB — ลองลดข้อมูลใน Log หรือ History'; }
+        }
+      }
     };
+
     window._fbRead = async function(key) {
-      const snap = await getDoc(DOC);
-      if (!snap.exists()) return null;
-      const data = snap.data();
-      return key in data ? data[key] : null;
-    };
-    window._fbListen = function(key, cb) {
-      return onSnapshot(DOC, snap => {
-        if (!snap.exists()) return;
+      if (BIG_KEYS.has(key)) {
+        const snap = await getDoc(_kvDoc(key));
+        if (!snap.exists()) return null;
+        const d = snap.data();
+        return d.value !== undefined ? d.value : null;
+      } else {
+        const snap = await getDoc(DOC_MAIN);
+        if (!snap.exists()) return null;
         const data = snap.data();
-        if (key in data) cb(data[key]);
-      }, err => {
-        if (err.code !== 'permission-denied') console.warn('FB listen', key, err);
-      });
+        return key in data ? data[key] : null;
+      }
+    };
+
+    window._fbListen = function(key, cb) {
+      if (BIG_KEYS.has(key)) {
+        return onSnapshot(_kvDoc(key), snap => {
+          if (!snap.exists()) return;
+          const d = snap.data();
+          if (d.value !== undefined) cb(d.value);
+        }, err => {
+          if (err.code !== 'permission-denied') console.warn('FB listen', key, err);
+        });
+      } else {
+        return onSnapshot(DOC_MAIN, snap => {
+          if (!snap.exists()) return;
+          const data = snap.data();
+          if (key in data) cb(data[key]);
+        }, err => {
+          if (err.code !== 'permission-denied') console.warn('FB listen', key, err);
+        });
+      }
     };
 
     // Sign in anonymously then sync
@@ -668,7 +708,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
       window._fbPending = {};
 
       // ── Initial load: Firebase → localStorage → app ──
-      const KEYS = ['orSE','orDocs','orItems','orCatOrder','orCatC','orCustomCats','orItemMarks','orPrefixHues','orDoneDays','orActivityLog','orNotes'];
+      const KEYS = ['orSE','orDocs','orItems','orCatOrder','orCatC','orCustomCats','orItemMarks','orPrefixHues','orDoneDays','orNotes'];
       const STR_KEYS = ['orPinHash','orMasterPinHash'];
       let needReload = false;
       for (const k of KEYS) {
@@ -699,6 +739,15 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
       const txt = document.getElementById('fbSyncTxt');
       if (dot) { dot.style.background = '#22c55e'; dot.title = 'เชื่อมต่อ Firebase แล้ว'; }
       if (txt) txt.textContent = 'เชื่อมต่อแล้ว ✓';
+
+      // ── ตรวจขนาดข้อมูล orSE แจ้งเตือนถ้าใกล้ limit ──
+      try {
+        const seSize = new TextEncoder().encode(localStorage.getItem('orSE')||'').length;
+        if (seSize > 700_000) {
+          console.warn(`[SIZE] orSE = ${(seSize/1024).toFixed(0)}KB`);
+          if (txt) { txt.textContent = `เชื่อมต่อแล้ว ✓ (History ${(seSize/1024).toFixed(0)}KB)`; txt.style.color='#fde68a'; }
+        }
+      } catch(e) {}
 
       // ── Listen for realtime changes from other devices ──
       window._fbListen('orSE', val => {
@@ -998,10 +1047,6 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
     <div class="tab" onclick="swTab('tpl')"><span class="ico"><svg width="15" height="15"><use href="#ic-tpl"/></svg></span> Template อาจารย์</div>
     <div class="tab" onclick="swTab('items')"><span class="ico"><svg width="15" height="15"><use href="#ic-history"/></svg></span> รายการ</div>
     <div class="tab" onclick="swTab('history')"><span class="ico"><svg width="15" height="15"><use href="#ic-history"/></svg></span> ประวัติ</div>
-    <div class="tab" onclick="swTab('log')">
-      <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
-      Activity Log
-    </div>
     <div class="tab" onclick="swTab('notes')">
       <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></span>
       Note
@@ -1317,56 +1362,6 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
     </div>
   </div>
 
-  <!-- ===== TAB: ACTIVITY LOG ===== -->
-  <div id="tlog" class="tc">
-    <div class="card">
-      <div class="ch" style="flex-wrap:wrap;gap:6px">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        <h2>Activity Log</h2>
-        <div class="sp"></div>
-        <!-- Filters — แถวเดียวกัน: ประเภท | user | ค้นหา | ล้าง -->
-        <select id="logFilterAction" onchange="_logPage=1;renderLog()" style="font-size:.78rem;padding:4px 8px;max-width:130px">
-          <option value="">📋 ทุกประเภท</option>
-          <option value="save">บันทึกรายการ</option>
-          <option value="delete">ลบรายการ</option>
-          <option value="edit">แก้ไขรายการ</option>
-          <option value="export">Export</option>
-        </select>
-        <select id="logFilterUser" onchange="_logPage=1;renderLog()" style="font-size:.78rem;padding:4px 8px;max-width:130px">
-          <option value="">👤 ทุกคน</option>
-        </select>
-        <input type="text" id="logSearch" placeholder="🔍 ค้นหา..." oninput="_logPage=1;renderLog()" style="width:130px;font-size:.78rem;padding:4px 8px">
-        <button class="btn bd" style="padding:4px 10px;font-size:.78rem" onclick="clearActivityLog()">🗑 ล้าง Log</button>
-      </div>
-      <!-- Summary strip -->
-      <div id="logSummaryBar" style="display:flex;gap:10px;padding:8px 16px;border-bottom:1px solid var(--g2);flex-wrap:wrap"></div>
-      <!-- Log list -->
-      <div style="overflow-x:auto">
-        <table class="ht" style="min-width:680px">
-          <thead style="position:sticky;top:0;z-index:2">
-            <tr>
-              <th style="width:44px">#</th>
-              <th style="width:130px">เวลา</th>
-              <th style="width:130px">User</th>
-              <th style="width:110px">Activity</th>
-              <th>รายละเอียด</th>
-            </tr>
-          </thead>
-          <tbody id="logTbody"></tbody>
-        </table>
-        <div id="logEmpty" style="text-align:center;padding:40px;color:var(--g4);font-size:.88rem;display:none">
-          <div style="font-size:2rem;margin-bottom:8px">📋</div>
-          ยังไม่มี Activity Log
-        </div>
-      </div>
-      <!-- Pagination -->
-      <div id="logPagination" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:10px 16px;border-top:1px solid var(--g2);background:var(--g1)">
-        <span id="logPageInfo" style="font-size:.76rem;color:var(--g4)"></span>
-        <div id="logPageBtns" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center"></div>
-      </div>
-    </div>
-  </div>
-
   <!-- ===== TAB: ITEMS ===== -->
   <div id="titems" class="tc">
     <div class="card">
@@ -1430,12 +1425,12 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
       </div>
 
       <!-- แถบเพิ่ม/แก้ไขล่าสุด -->
-      <div id="recentItemsBar" style="display:none;padding:0;border-bottom:1px solid var(--g2);background:#fff">
-        <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--g2);background:var(--g1)">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <span style="font-size:.76rem;font-weight:700;color:var(--primary)">เพิ่ม / แก้ไขล่าสุด</span>
+      <div id="recentItemsBar" style="display:none;padding:8px 16px;border-bottom:2px solid #e0f2fe;background:#f0f9ff">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0369a1" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span style="font-size:.76rem;font-weight:700;color:#0369a1">เพิ่ม / แก้ไขล่าสุด</span>
         </div>
-        <div id="recentItemsList"></div>
+        <div id="recentItemsList" style="display:flex;flex-wrap:wrap;gap:6px"></div>
       </div>
 
       <!-- table -->
@@ -1458,49 +1453,6 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
         </table>
         <div id="itm-empty" style="text-align:center;padding:36px;color:var(--g4);display:none">ไม่พบรายการ</div>
         <div id="itmPager" style="padding:10px 14px 4px;display:flex;justify-content:center"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== TAB: LOG ===== -->
-  <div id="tlog" class="tc">
-    <div class="card">
-      <div class="ch" style="flex-wrap:wrap;gap:6px">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
-        <h2>Activity Log</h2>
-        <div class="sp"></div>
-        <!-- Filters -->
-        <select id="logUser" onchange="renderLog()" style="display:none;font-size:.78rem;padding:4px 8px;max-width:130px">
-          <option value="">👤 ทุกคน</option>
-        </select>
-        <select id="logAction" onchange="renderLog()" style="font-size:.78rem;padding:4px 8px">
-          <option value="">ทุก Action</option>
-          <option value="login">🔑 Login</option>
-          <option value="save">📥 บันทึก</option>
-          <option value="edit">✏️ แก้ไข</option>
-          <option value="delete">🗑️ ลบ</option>
-          <option value="export">📊 Export</option>
-        </select>
-        <input type="date" id="logDate" onchange="renderLog()" style="font-size:.78rem;padding:4px 8px;border:1.5px solid rgba(255,255,255,.3);border-radius:6px;background:rgba(255,255,255,.15);color:#fff;max-width:140px">
-        <button class="btn bs" style="padding:4px 10px;font-size:.78rem" onclick="document.getElementById('logUser').value='';document.getElementById('logAction').value='';document.getElementById('logDate').value='';renderLog()">↺ ล้าง</button>
-        <button class="btn bd" style="padding:4px 10px;font-size:.78rem" onclick="clearActivityLog()">🗑 ล้าง Log</button>
-      </div>
-      <div class="cb" style="padding:0">
-        <div style="overflow-x:auto;max-height:70vh;overflow-y:auto">
-          <table class="ht" style="min-width:600px">
-            <thead style="position:sticky;top:0;z-index:2">
-              <tr>
-                <th style="width:44px">#</th>
-                <th style="width:130px">เวลา</th>
-                <th style="width:100px">ผู้ใช้</th>
-                <th style="width:90px">Action</th>
-                <th>รายละเอียด</th>
-              </tr>
-            </thead>
-            <tbody id="log-tb"></tbody>
-          </table>
-        </div>
-        <div id="log-empty" style="text-align:center;padding:36px;color:var(--g4);font-size:.88rem;display:none">ไม่มีข้อมูล Log</div>
       </div>
     </div>
   </div>
@@ -1575,136 +1527,49 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
           </div>
 
           <!-- Toolbar -->
-          <!-- Excel-style ribbon toolbar -->
-          <div id="noteToolbar" style="background:#f8fafc;border-bottom:1px solid var(--g3);padding:0">
-            <!-- Row 1: Font & Size -->
-            <div style="display:flex;align-items:center;gap:0;padding:4px 10px 3px;border-bottom:1px solid var(--g2);flex-wrap:wrap;gap:3px">
-              <!-- Undo / Redo -->
-              <div style="display:flex;gap:2px;margin-right:4px">
-                <button onclick="noteFmt('undo')" title="เลิกทำ (Ctrl+Z)" class="note-tb-btn" style="padding:3px 7px;font-size:.75rem">↩</button>
-                <button onclick="noteFmt('redo')" title="ทำซ้ำ (Ctrl+Y)" class="note-tb-btn" style="padding:3px 7px;font-size:.75rem">↪</button>
-              </div>
-              <span style="width:1px;height:20px;background:var(--g3);margin:0 4px;align-self:center;flex-shrink:0"></span>
-              <!-- Font family -->
-              <select onchange="noteFmtFont(this.value);this.value=''" class="note-tb-btn" style="font-size:.74rem;padding:3px 6px;min-width:96px;border-radius:4px" title="ฟอนต์">
-                <option value="">ฟอนต์...</option>
-                <option value="Sarabun" style="font-family:Sarabun">Sarabun</option>
-                <option value="Arial" style="font-family:Arial">Arial</option>
-                <option value="Tahoma" style="font-family:Tahoma">Tahoma</option>
-                <option value="Georgia" style="font-family:Georgia">Georgia</option>
-                <option value="Courier New" style="font-family:'Courier New'">Courier New</option>
-                <option value="IBM Plex Mono" style="font-family:'IBM Plex Mono'">Mono</option>
-              </select>
-              <!-- Font size -->
-              <select onchange="noteFmtSize(this.value);this.value=''" class="note-tb-btn" style="font-size:.74rem;padding:3px 5px;min-width:68px;border-radius:4px" title="ขนาดอักษร">
-                <option value="">ขนาด...</option>
-                <option value="1">8pt</option>
-                <option value="2">10pt</option>
-                <option value="3">12pt</option>
-                <option value="4">14pt</option>
-                <option value="5">18pt</option>
-                <option value="6">24pt</option>
-                <option value="7">36pt</option>
-              </select>
-              <span style="width:1px;height:20px;background:var(--g3);margin:0 4px;align-self:center;flex-shrink:0"></span>
-              <!-- Text color -->
-              <label title="สีตัวอักษร" class="note-tb-btn" style="cursor:pointer;display:flex;align-items:center;gap:3px;padding:3px 6px;border-radius:4px">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
-                <span style="font-size:.68rem;color:var(--g6)">A</span>
-                <input type="color" value="#1e293b" oninput="noteFmtColor(this.value)" style="width:18px;height:14px;border:none;padding:0;background:none;cursor:pointer">
-              </label>
-              <!-- Highlight color -->
-              <label title="สีไฮไลท์ข้อความ" class="note-tb-btn" style="cursor:pointer;display:flex;align-items:center;gap:3px;padding:3px 6px;border-radius:4px">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h.01"/><path d="M7.5 4.21l0 0a2 2 0 0 1 2.83 0L19 12.89a2 2 0 0 1 0 2.83L17.12 17.6a2 2 0 0 1-2.83 0L5.67 9.04a2 2 0 0 1 0-2.83L7.5 4.21z"/><path d="M3 21h8"/></svg>
-                <input type="color" value="#fef9c3" oninput="noteFmtBg(this.value)" style="width:18px;height:14px;border:none;padding:0;background:none;cursor:pointer">
-              </label>
-              <span style="flex:1"></span>
-              <span id="noteWordCount" style="font-size:.68rem;color:var(--g4);align-self:center;white-space:nowrap"></span>
-            </div>
-
-            <!-- Row 2: Formatting buttons grouped like Excel ribbon -->
-            <div style="display:flex;align-items:center;gap:0;padding:4px 10px;flex-wrap:wrap;gap:2px">
-
-              <!-- Group: Character formatting -->
-              <div style="display:flex;gap:2px;background:#fff;border:1px solid var(--g3);border-radius:5px;padding:2px 3px;align-items:center" title="รูปแบบตัวอักษร">
-                <button onclick="noteFmt('bold')" title="ตัวหนา (Ctrl+B)" class="note-tb-btn" style="padding:3px 7px;font-size:.82rem;border:none;font-weight:700"><b>B</b></button>
-                <button onclick="noteFmt('italic')" title="ตัวเอียง (Ctrl+I)" class="note-tb-btn" style="padding:3px 7px;font-size:.82rem;border:none"><i>I</i></button>
-                <button onclick="noteFmt('underline')" title="ขีดเส้นใต้ (Ctrl+U)" class="note-tb-btn" style="padding:3px 7px;font-size:.82rem;border:none"><u>U</u></button>
-                <button onclick="noteFmt('strikeThrough')" title="ขีดทับ" class="note-tb-btn" style="padding:3px 7px;font-size:.82rem;border:none"><s>S</s></button>
-                <button onclick="noteFmt('superscript')" title="Superscript" class="note-tb-btn" style="padding:3px 6px;font-size:.7rem;border:none">x²</button>
-                <button onclick="noteFmt('subscript')" title="Subscript" class="note-tb-btn" style="padding:3px 6px;font-size:.7rem;border:none">x₂</button>
-              </div>
-
-              <span style="width:1px;height:22px;background:var(--g3);margin:0 4px;align-self:center;flex-shrink:0"></span>
-
-              <!-- Group: Paragraph style -->
-              <div style="display:flex;gap:2px;background:#fff;border:1px solid var(--g3);border-radius:5px;padding:2px 3px;align-items:center" title="รูปแบบย่อหน้า">
-                <button onclick="noteFmtBlock('h2')" title="หัวข้อใหญ่ (H1)" class="note-tb-btn" style="padding:2px 7px;font-size:.72rem;font-weight:700;border:none">H1</button>
-                <button onclick="noteFmtBlock('h3')" title="หัวข้อรอง (H2)" class="note-tb-btn" style="padding:2px 7px;font-size:.72rem;font-weight:700;border:none">H2</button>
-                <button onclick="noteFmtBlock('h4')" title="หัวข้อย่อย (H3)" class="note-tb-btn" style="padding:2px 7px;font-size:.72rem;font-weight:700;border:none">H3</button>
-                <button onclick="noteFmtBlock('p')" title="ย่อหน้าปกติ" class="note-tb-btn" style="padding:2px 7px;font-size:.72rem;border:none">¶</button>
-                <button onclick="noteFmtBlock('pre')" title="Code block" class="note-tb-btn" style="padding:2px 7px;font-size:.7rem;font-family:monospace;border:none">{ }</button>
-                <button onclick="noteFmtBlock('blockquote')" title="อ้างอิง" class="note-tb-btn" style="padding:2px 7px;font-size:.72rem;border:none">"</button>
-              </div>
-
-              <span style="width:1px;height:22px;background:var(--g3);margin:0 4px;align-self:center;flex-shrink:0"></span>
-
-              <!-- Group: Lists -->
-              <div style="display:flex;gap:2px;background:#fff;border:1px solid var(--g3);border-radius:5px;padding:2px 3px;align-items:center" title="รายการ">
-                <button onclick="noteFmt('insertUnorderedList')" title="Bullet list" class="note-tb-btn" style="padding:3px 7px;font-size:.8rem;border:none">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>
-                </button>
-                <button onclick="noteFmt('insertOrderedList')" title="Numbered list" class="note-tb-btn" style="padding:3px 7px;font-size:.8rem;border:none">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg>
-                </button>
-                <button onclick="noteFmt('indent')" title="เพิ่ม Indent" class="note-tb-btn" style="padding:3px 7px;font-size:.8rem;border:none">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><polyline points="7 12 11 8 7 4"/><line x1="11" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-                </button>
-                <button onclick="noteFmt('outdent')" title="ลด Indent" class="note-tb-btn" style="padding:3px 7px;font-size:.8rem;border:none">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><polyline points="11 12 7 8 11 4"/><line x1="11" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-                </button>
-              </div>
-
-              <span style="width:1px;height:22px;background:var(--g3);margin:0 4px;align-self:center;flex-shrink:0"></span>
-
-              <!-- Group: Alignment -->
-              <div style="display:flex;gap:2px;background:#fff;border:1px solid var(--g3);border-radius:5px;padding:2px 3px;align-items:center" title="การจัดวาง">
-                <button onclick="noteFmt('justifyLeft')" title="ชิดซ้าย" class="note-tb-btn" style="padding:3px 7px;font-size:.8rem;border:none">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>
-                </button>
-                <button onclick="noteFmt('justifyCenter')" title="กึ่งกลาง" class="note-tb-btn" style="padding:3px 7px;font-size:.8rem;border:none">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
-                </button>
-                <button onclick="noteFmt('justifyRight')" title="ชิดขวา" class="note-tb-btn" style="padding:3px 7px;font-size:.8rem;border:none">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/></svg>
-                </button>
-                <button onclick="noteFmt('justifyFull')" title="ชิดสองข้าง" class="note-tb-btn" style="padding:3px 7px;font-size:.8rem;border:none">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-                </button>
-              </div>
-
-              <span style="width:1px;height:22px;background:var(--g3);margin:0 4px;align-self:center;flex-shrink:0"></span>
-
-              <!-- Group: Insert -->
-              <div style="display:flex;gap:2px;background:#fff;border:1px solid var(--g3);border-radius:5px;padding:2px 3px;align-items:center" title="แทรก">
-                <button onclick="noteInsertHR()" title="เส้นคั่น (HR)" class="note-tb-btn" style="padding:3px 7px;font-size:.72rem;border:none">─</button>
-                <button onclick="noteInsertLink()" title="แทรกลิงก์" class="note-tb-btn" style="padding:3px 7px;font-size:.8rem;border:none">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                </button>
-                <button onclick="noteInsertTable()" title="แทรกตาราง" class="note-tb-btn" style="padding:3px 7px;font-size:.8rem;border:none">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
-                </button>
-              </div>
-
-              <span style="width:1px;height:22px;background:var(--g3);margin:0 4px;align-self:center;flex-shrink:0"></span>
-
-              <!-- Remove formatting -->
-              <button onclick="noteFmt('removeFormat')" title="ล้างรูปแบบ" class="note-tb-btn" style="padding:3px 9px;font-size:.72rem;display:flex;align-items:center;gap:3px">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/><line x1="4" y1="20" x2="20" y2="4" stroke="#ef4444"/></svg>
-                ล้าง
-              </button>
-
-            </div>
+          <div id="noteToolbar" style="display:flex;gap:4px;flex-wrap:wrap;padding:8px 14px;border-bottom:1px solid var(--g3);background:var(--g1)">
+            <button onclick="noteFmt('bold')" title="ตัวหนา (Ctrl+B)" class="note-tb-btn"><b>B</b></button>
+            <button onclick="noteFmt('italic')" title="ตัวเอียง (Ctrl+I)" class="note-tb-btn"><i>I</i></button>
+            <button onclick="noteFmt('underline')" title="ขีดเส้นใต้ (Ctrl+U)" class="note-tb-btn"><u>U</u></button>
+            <button onclick="noteFmt('strikeThrough')" title="ขีดทับ" class="note-tb-btn"><s>S</s></button>
+            <span style="width:1px;height:20px;background:var(--g3);margin:0 2px;align-self:center"></span>
+            <button onclick="noteFmtBlock('h2')" title="หัวข้อใหญ่" class="note-tb-btn" style="font-size:.72rem;font-weight:700">H1</button>
+            <button onclick="noteFmtBlock('h3')" title="หัวข้อเล็ก" class="note-tb-btn" style="font-size:.72rem;font-weight:700">H2</button>
+            <button onclick="noteFmtBlock('p')" title="ย่อหน้าปกติ" class="note-tb-btn" style="font-size:.72rem">¶</button>
+            <span style="width:1px;height:20px;background:var(--g3);margin:0 2px;align-self:center"></span>
+            <button onclick="noteFmt('insertUnorderedList')" title="รายการจุด" class="note-tb-btn">•≡</button>
+            <button onclick="noteFmt('insertOrderedList')" title="รายการเลข" class="note-tb-btn">1≡</button>
+            <span style="width:1px;height:20px;background:var(--g3);margin:0 2px;align-self:center"></span>
+            <button onclick="noteFmt('justifyLeft')" title="ชิดซ้าย" class="note-tb-btn">◀≡</button>
+            <button onclick="noteFmt('justifyCenter')" title="กึ่งกลาง" class="note-tb-btn">≡≡</button>
+            <button onclick="noteFmt('justifyRight')" title="ชิดขวา" class="note-tb-btn">≡▶</button>
+            <span style="width:1px;height:20px;background:var(--g3);margin:0 2px;align-self:center"></span>
+            <select onchange="noteFmtFont(this.value);this.value=''" class="note-tb-btn" style="font-size:.72rem;padding:2px 5px;min-width:80px">
+              <option value="">ฟอนต์...</option>
+              <option value="Sarabun">Sarabun</option>
+              <option value="IBM Plex Mono">Mono</option>
+              <option value="Arial">Arial</option>
+              <option value="Tahoma">Tahoma</option>
+            </select>
+            <select onchange="noteFmtSize(this.value);this.value=''" class="note-tb-btn" style="font-size:.72rem;padding:2px 5px;min-width:60px">
+              <option value="">ขนาด...</option>
+              <option value="1">เล็กมาก</option>
+              <option value="2">เล็ก</option>
+              <option value="3">ปกติ</option>
+              <option value="4">ใหญ่</option>
+              <option value="5">ใหญ่มาก</option>
+            </select>
+            <span style="width:1px;height:20px;background:var(--g3);margin:0 2px;align-self:center"></span>
+            <label title="สีตัวอักษร" class="note-tb-btn" style="cursor:pointer;display:flex;align-items:center;gap:3px;padding:3px 6px">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+              <input type="color" value="#1e293b" oninput="noteFmtColor(this.value)" style="width:16px;height:14px;border:none;padding:0;background:none;cursor:pointer">
+            </label>
+            <label title="สีพื้นหลังข้อความ" class="note-tb-btn" style="cursor:pointer;display:flex;align-items:center;gap:3px;padding:3px 6px">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+              <input type="color" value="#fef9c3" oninput="noteFmtBg(this.value)" style="width:16px;height:14px;border:none;padding:0;background:none;cursor:pointer">
+            </label>
+            <span style="flex:1"></span>
+            <span id="noteWordCount" style="font-size:.7rem;color:var(--g4);align-self:center"></span>
           </div>
 
           <!-- Content area -->
@@ -5237,14 +5102,19 @@ document.addEventListener('DOMContentLoaded', () => {
   gdInit();
   const gdTs = localStorage.getItem('orGDLastSync');
   if (gdTs) gdSetLastSync(gdTs);
+
+  // ── ตรวจ Auto-Archive (หลังข้อมูลโหลดเสร็จ 1.5 วินาที) ──
+  setTimeout(() => {
+    if (typeof checkAndRunAutoArchive === 'function') checkAndRunAutoArchive();
+  }, 1500);
 });
 
 /* ══════════════════════════════════════════
    TABS
 ══════════════════════════════════════════ */
 function swTab(n) {
-  const names = ['entry','tpl','items','history','log','notes'];
-  const idMap = {entry:'tentry',tpl:'ttpl',items:'titems',history:'thistory',log:'tlog',notes:'tnotes'};
+  const names = ['entry','tpl','items','history','notes'];
+  const idMap = {entry:'tentry',tpl:'ttpl',items:'titems',history:'thistory',notes:'tnotes'};
   document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('ac', names[i] === n));
   document.querySelectorAll('.tc').forEach(c => c.classList.remove('ac'));
   const el = document.getElementById(idMap[n]);
@@ -5252,7 +5122,6 @@ function swTab(n) {
   if (n === 'history') { rHist(); renderCal(); }
   if (n === 'tpl') { renderDocGrid(); updateDocSelects(); }
   if (n === 'items') rItems();
-  if (n === 'log') renderLog();
   if (n === 'notes') { renderNoteList(); }
 }
 
@@ -6721,12 +6590,10 @@ function saveEditItem() {
       ITEMS[dupIdx] = {...ITEMS[dupIdx], n:code, d:desc, uom, min, max, bal:newBal, updatedAt:nowTs, updatedRaw:nowRaw, isNew:false};
       showT('อัปเดตรายการ '+code+' แล้ว (พบรายการซ้ำ)', 'ok');
       addLog('edit', `อัปเดต ${code} — ${desc}`);
-      addRecentItem('edit', {n:code, d:desc});
     } else {
       ITEMS.push({n:code, d:desc, bal:newBal, uom, min, max, price:0, updatedAt:nowTs, updatedRaw:nowRaw, isNew:true});
       showT('เพิ่มรายการ '+code+' แล้ว', 'ok');
       addLog('save', `เพิ่มรายการใหม่ ${code} — ${desc}`);
-      addRecentItem('new', {n:code, d:desc});
     }
   } else {
     // Edit
@@ -6794,7 +6661,6 @@ function saveEditItem() {
       showT('แก้ไข '+code+' แล้ว', 'ok');
     }
     addLog('edit', `แก้ไข ${_editItemCode}${codeChanged?' → '+code:''} — ${desc}${tplUpdated>0?' (Template +'+tplUpdated+')':''}`);
-    addRecentItem('edit', {n:code, d:desc});
   }
   if (window.ITOK) window.ITOK = ITEMS.map(i => ({...i, tk: tok(i.d+' '+i.n)}));
   saveItems();
@@ -6819,7 +6685,6 @@ function deleteItemConfirmed() {
   if (window.ITOK) window.ITOK = ITEMS.map(i => ({...i, tk: tok(i.d+' '+i.n)}));
   saveItems();
   addLog('delete', `ลบรายการ ${_pendDelCode} ออกจากฐานข้อมูล`);
-  addRecentItem('delete', {n:_pendDelCode, d:ITEMS.find(i=>i.n===_pendDelCode)?.d||''});
   showT('ลบ '+_pendDelCode+' แล้ว', 'ok');
   _pendDelCode = null;
   closeModal('modalDelItem');
@@ -6844,7 +6709,7 @@ function sortItems(key) {
 
 // ── Items pagination state ──
 let _itmPage = 1;
-const ITM_PER_PAGE = 50;
+const ITM_PER_PAGE = 10;
 
 function rItems() {
   const q      = (document.getElementById('itmQ')?.value    || '').toLowerCase();
@@ -6878,25 +6743,6 @@ function rItems() {
   renderItemsAll(rows);
 }
 
-// ── Recent Activity Log (Items) ──
-const RECENT_ITEMS_KEY = 'orRecentItemsLog';
-const RECENT_ITEMS_PER_PAGE = 20;
-let _recentItemsPage = 1;
-
-function _loadRecentItemsLog() {
-  try { return JSON.parse(localStorage.getItem(RECENT_ITEMS_KEY) || '[]'); } catch { return []; }
-}
-function _saveRecentItemsLog(log) {
-  localStorage.setItem(RECENT_ITEMS_KEY, JSON.stringify(log));
-  if (window._fbWrite) window._fbWrite(RECENT_ITEMS_KEY, log);
-}
-function addRecentItem(action, item) {
-  const log = _loadRecentItemsLog();
-  log.unshift({ action, code: item.n || '', desc: item.d || '', ts: new Date().toLocaleString('th-TH'), tsRaw: Date.now() });
-  if (log.length > 200) log.splice(200);
-  _saveRecentItemsLog(log);
-}
-
 function toggleRecentBar() {
   const bar = document.getElementById('recentItemsBar');
   const btn = document.getElementById('btnRecentItems');
@@ -6906,7 +6752,6 @@ function toggleRecentBar() {
     bar.style.display = 'none';
     if (btn) { btn.style.background = ''; btn.style.color = ''; }
   } else {
-    _recentItemsPage = 1;
     renderRecentItems(true);
     if (btn) { btn.style.background = '#dbeafe'; btn.style.color = '#1d4ed8'; }
   }
@@ -6917,62 +6762,35 @@ function renderRecentItems(forceShow) {
   const list = document.getElementById('recentItemsList');
   if (!bar || !list) return;
 
-  let allEntries = _loadRecentItemsLog();
-  if (!allEntries.length) {
-    allEntries = ITEMS.filter(i => i.updatedRaw).slice()
-      .sort((a, b) => (b.updatedRaw||0) - (a.updatedRaw||0))
-      .map(i => ({ action: i.isNew ? 'new' : 'edit', code: i.n, desc: i.d, ts: i.updatedAt || '', tsRaw: i.updatedRaw || 0 }));
-  }
-  if (!allEntries.length) {
+  const recent = ITEMS
+    .filter(i => i.updatedRaw)
+    .slice()
+    .sort((a, b) => (b.updatedRaw||0) - (a.updatedRaw||0))
+    .slice(0, 10);
+
+  if (!recent.length) {
     if (forceShow) { bar.style.display = ''; list.innerHTML = '<span style="font-size:.78rem;color:var(--g4)">ยังไม่มีรายการที่แก้ไข</span>'; }
     return;
   }
   if (forceShow) bar.style.display = '';
 
-  const total = allEntries.length;
-  const totalPages = Math.ceil(total / RECENT_ITEMS_PER_PAGE);
-  _recentItemsPage = Math.max(1, Math.min(_recentItemsPage, totalPages));
-  const startIdx = (_recentItemsPage - 1) * RECENT_ITEMS_PER_PAGE;
-  const paged = allEntries.slice(startIdx, startIdx + RECENT_ITEMS_PER_PAGE);
-
-  const ACTION_MAP = {
-    'new':    { tag:'✨ ใหม่',   bg:'#dcfce7', color:'#15803d', border:'#86efac' },
-    'edit':   { tag:'✏️ แก้ไข', bg:'#dbeafe', color:'#1d4ed8', border:'#93c5fd' },
-    'delete': { tag:'🗑️ ลบ',   bg:'#fee2e2', color:'#b91c1c', border:'#fca5a5' },
-  };
-  // Build numbered vertical list
-  const rows = paged.map((entry, i) => {
-    const s = ACTION_MAP[entry.action] || ACTION_MAP['edit'];
-    const clickable = entry.action !== 'delete';
-    const rowNum = startIdx + i + 1;
-    const isEven = i % 2 === 1;
-    return `<div ${clickable ? `onclick="openEditItem('${esc(entry.code)}')"` : ''}
-      style="display:flex;align-items:center;gap:10px;padding:6px 14px;background:${isEven ? '#f8fafc' : '#fff'};border-bottom:1px solid var(--g2);cursor:${clickable ? 'pointer' : 'default'};transition:background .12s"
-      ${clickable ? `onmouseover="this.style.background='${s.bg}'" onmouseout="this.style.background='${isEven ? '#f8fafc' : '#fff'}'"` : ''}>
-      <span style="min-width:24px;text-align:right;font-size:.71rem;color:var(--g4);font-family:monospace;flex-shrink:0">${rowNum}</span>
-      <span style="font-size:.68rem;font-weight:700;background:${s.bg};color:${s.color};padding:1px 7px;border-radius:10px;border:1px solid ${s.border};white-space:nowrap;flex-shrink:0">${s.tag}</span>
-      <span style="font-family:'IBM Plex Mono',monospace;font-size:.73rem;color:var(--primary);font-weight:700;white-space:nowrap;flex-shrink:0;min-width:80px">${esc(entry.code)}</span>
-      <span style="font-size:.8rem;color:var(--g8);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(entry.desc)}</span>
-      <span style="font-size:.68rem;color:var(--g4);white-space:nowrap;flex-shrink:0">${entry.ts}</span>
-      ${clickable ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--g4)" stroke-width="2" stroke-linecap="round" style="flex-shrink:0"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>` : ''}
+  list.innerHTML = recent.map(i => {
+    const isNew  = i.isNew;
+    const bg     = isNew ? '#dcfce7' : '#dbeafe';
+    const color  = isNew ? '#15803d' : '#1d4ed8';
+    const border = isNew ? '#86efac' : '#93c5fd';
+    const tag    = isNew ? '✨ ใหม่' : '✏️ แก้ไข';
+    return `<div onclick="openEditItem('${esc(i.n)}')"
+      style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:8px;background:#fff;border:1.5px solid ${border};cursor:pointer;transition:all .15s"
+      onmouseover="this.style.background='${bg}'" onmouseout="this.style.background='#fff'">
+      <span style="font-size:.68rem;font-weight:700;background:${bg};color:${color};padding:1px 5px;border-radius:4px">${tag}</span>
+      <span style="font-family:monospace;font-size:.72rem;color:${color};font-weight:600">${esc(i.n)}</span>
+      <span style="font-size:.75rem;color:var(--g8);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(i.d)}</span>
+      <span style="font-size:.67rem;color:var(--g4)">${i.updatedAt||''}</span>
     </div>`;
   }).join('');
-
-  let pagerHtml = '';
-  if (totalPages > 1) {
-    const btnSt = (a) => `padding:3px 9px;border-radius:5px;border:1.5px solid ${a?'var(--primary)':'var(--g3)'};background:${a?'var(--primary)':'#fff'};color:${a?'#fff':'var(--g6)'};cursor:${a?'default':'pointer'};font-size:.73rem;font-weight:600;font-family:'Sarabun',sans-serif;`;
-    let btns = `<button style="${btnSt(false)}opacity:${_recentItemsPage===1?'.4':'1'}" ${_recentItemsPage===1?'disabled':''} onclick="_recentGoPage(${_recentItemsPage-1})">‹</button>`;
-    for (let p=1;p<=totalPages;p++){
-      if(totalPages>7&&p!==1&&p!==totalPages&&(p<_recentItemsPage-1||p>_recentItemsPage+1)){if(p===2||p===totalPages-1)btns+=`<span style="font-size:.73rem;color:var(--g4);padding:3px 4px">…</span>`;continue;}
-      btns+=`<button style="${btnSt(p===_recentItemsPage)}" onclick="_recentGoPage(${p})">${p}</button>`;
-    }
-    btns+=`<button style="${btnSt(false)}opacity:${_recentItemsPage===totalPages?'.4':'1'}" ${_recentItemsPage===totalPages?'disabled':''} onclick="_recentGoPage(${_recentItemsPage+1})">›</button>`;
-    pagerHtml=`<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:7px 14px;border-top:1px solid var(--g2)"><span style="font-size:.72rem;color:var(--g4);margin-right:4px">${startIdx+1}–${Math.min(startIdx+RECENT_ITEMS_PER_PAGE,total)} จาก ${total}</span>${btns}</div>`;
-  }
-  list.innerHTML = `<div style="border-radius:0 0 var(--r) var(--r);overflow:hidden">${rows}</div>${pagerHtml}`;
 }
 
-function _recentGoPage(p) { _recentItemsPage = p; renderRecentItems(true); }
 function renderItemsAll(items) {
   const tb = document.getElementById('itm-tb');
   const em = document.getElementById('itm-empty');
@@ -7704,231 +7522,191 @@ function _reloadAppData() {
 window._reloadAppData = _reloadAppData;
 
 /* ══════════════════════════════════════════
-/* ══════════════════════════════════════════
-   ACTIVITY LOG
+   AUTO-ARCHIVE SYSTEM
+   ── วันที่ 7 ของเดือนใหม่ → archive เดือนก่อน ──
+   1. คำนวณยอดคงเหลือสุดท้ายของทุก item ในเดือนก่อน
+   2. บันทึกเป็น item.bal (ยอดยกมา)
+   3. ลบ saved[] ทั้งหมดที่เป็นเดือนก่อนออก
+   4. บันทึกประวัติการ Archive ไว้ใน localStorage
 ══════════════════════════════════════════ */
-const LOG_KEY = 'orActivityLog';
+const ARCHIVE_KEY = 'orLastArchive';   // เก็บว่า archive เดือนอะไรล่าสุดไปแล้ว
+const ARCHIVE_LOG_KEY = 'orArchiveLog'; // log ประวัติ archive ทั้งหมด
 
-function getLogs() {
-  try { return JSON.parse(localStorage.getItem(LOG_KEY) || '[]'); } catch(e) { return []; }
-}
-function saveLogs(logs) {
-  localStorage.setItem(LOG_KEY, JSON.stringify(logs));
-  if (window._fbWrite) window._fbWrite(LOG_KEY, logs);
-}
-
-// action types: save | delete | edit | export
-// พร้อม icon + color
-const LOG_STYLES = {
-  save:   { label:'บันทึกรายการ', icon:'💾', bg:'#f0fdf4', color:'#15803d', border:'#86efac' },
-  delete: { label:'ลบรายการ',     icon:'🗑',  bg:'#fff8f8', color:'#b91c1c', border:'#fca5a5' },
-  edit:   { label:'แก้ไขรายการ',  icon:'✏️',  bg:'#f8faff', color:'#1d4ed8', border:'#93c5fd' },
-  export: { label:'Export',       icon:'📊', bg:'#fefce8', color:'#92400e', border:'#fde68a' },
-};
-
-function addLog(action, detail) {
-  const logs = getLogs();
-  logs.push({
-    id: Date.now(),
-    ts: new Date().toLocaleString('th-TH'),
-    tsRaw: Date.now(),
-    user: getCurrentUser(),
-    action,
-    detail
-  });
-  saveLogs(logs);
-  // อัปเดต badge บน tab
-  _updateLogBadge(logs.length);
+function _archiveYYYYMM(date) {
+  // คืน "YYYY-MM" ของเดือนก่อน date
+  const d = date || new Date();
+  const prev = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+  return `${prev.getFullYear()}-${String(prev.getMonth()+1).padStart(2,'0')}`;
 }
 
-function _updateLogBadge(count) {
-  const badge = document.getElementById('logTabBadge');
-  if (badge) badge.textContent = count > 0 ? count : '';
+function checkAndRunAutoArchive() {
+  const now = new Date();
+  const day = now.getDate();
+  if (day < 7) return; // ยังไม่ถึงวันที่ 7
+
+  const targetMonth = _archiveYYYYMM(now); // เดือนที่ต้อง archive
+  const lastArchived = localStorage.getItem(ARCHIVE_KEY) || '';
+  if (lastArchived >= targetMonth) return; // archive ไปแล้ว
+
+  // ถามยืนยัน (ครั้งแรกเท่านั้น — ถ้าเคย dismiss แล้วจะไม่ถามซ้ำจนถึงเดือนหน้า)
+  const dismissKey = `orArchiveDismiss_${targetMonth}`;
+  if (localStorage.getItem(dismissKey)) return;
+
+  _showArchivePrompt(targetMonth, dismissKey);
 }
 
-const LOG_PER_PAGE = 50;
-let _logPage = 1;
+function _showArchivePrompt(targetMonth, dismissKey) {
+  const [y, m] = targetMonth.split('-');
+  const thMonths = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                    'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  const monthName = thMonths[parseInt(m)] + ' ' + (parseInt(y)+543);
 
-function renderLog() {
-  const tbody  = document.getElementById('logTbody');
-  const empty  = document.getElementById('logEmpty');
-  const sumBar = document.getElementById('logSummaryBar');
-  if (!tbody) return;
-
-  const logs = getLogs().slice().reverse(); // ล่าสุดก่อน
-  const userFilter   = document.getElementById('logFilterUser')?.value   || '';
-  const actionFilter = document.getElementById('logFilterAction')?.value || '';
-  const search       = (document.getElementById('logSearch')?.value || '').toLowerCase();
-
-  // Populate user dropdown
-  const userSel = document.getElementById('logFilterUser');
-  if (userSel) {
-    const allUsers = [...new Set(getLogs().map(l => l.user).filter(Boolean))].sort();
-    const cur = userSel.value;
-    userSel.innerHTML = '<option value="">👤 ทุกคน</option>' +
-      allUsers.map(u => `<option value="${esc(u)}"${u===cur?' selected':''}>${esc(u)}</option>`).join('');
-  }
-
-  let filtered = logs;
-  if (userFilter)   filtered = filtered.filter(l => l.user === userFilter);
-  if (actionFilter) filtered = filtered.filter(l => l.action === actionFilter);
-  if (search)       filtered = filtered.filter(l =>
-    (l.user||'').toLowerCase().includes(search) ||
-    (l.detail||'').toLowerCase().includes(search) ||
-    (LOG_STYLES[l.action]?.label||'').toLowerCase().includes(search)
-  );
-
-  // Summary bar
-  if (sumBar) {
-    const counts = {};
-    getLogs().forEach(l => { counts[l.action] = (counts[l.action]||0)+1; });
-    sumBar.innerHTML = Object.entries(counts).map(([a, c]) => {
-      const s = LOG_STYLES[a] || {};
-      return `<span style="padding:3px 10px;border-radius:20px;font-size:.74rem;font-weight:600;background:${s.bg||'#f1f5f9'};color:${s.color||'#475569'};border:1px solid ${s.border||'#e2e8f0'}">${s.icon||'•'} ${s.label||a}: ${c}</span>`;
-    }).join('') || '<span style="font-size:.74rem;color:var(--g4)">ยังไม่มีกิจกรรม</span>';
-  }
-
-  _updateLogBadge(getLogs().length);
-
-  if (!filtered.length) {
-    tbody.innerHTML = '';
-    if (empty) empty.style.display = '';
-    _renderLogPagination(0, 0);
+  // นับรายการที่จะถูกลบ
+  const toDelete = saved.filter(s => (s.date||'').startsWith(targetMonth));
+  if (!toDelete.length) {
+    // ไม่มีข้อมูลเดือนนั้น — mark ว่า archive แล้ว
+    localStorage.setItem(ARCHIVE_KEY, targetMonth);
     return;
   }
-  if (empty) empty.style.display = 'none';
 
-  // Pagination
-  const totalPages = Math.ceil(filtered.length / LOG_PER_PAGE);
-  if (_logPage > totalPages) _logPage = totalPages;
-  if (_logPage < 1) _logPage = 1;
-
-  const start = (_logPage - 1) * LOG_PER_PAGE;
-  const end   = Math.min(start + LOG_PER_PAGE, filtered.length);
-  const paged = filtered.slice(start, end);
-
-  tbody.innerHTML = paged.map((l, i) => {
-    const rowNum = filtered.length - (start + i); // เลขจากมากไปน้อย
-    const s = LOG_STYLES[l.action] || { label: l.action, icon:'•', bg:'#f1f5f9', color:'#475569', border:'#e2e8f0' };
-    return `<tr style="background:${s.bg}">
-      <td style="color:var(--g4);font-size:.72rem;padding-left:14px">${rowNum}</td>
-      <td style="font-size:.72rem;color:var(--g6);font-family:monospace;white-space:nowrap">${l.ts}</td>
-      <td>
-        <span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;font-size:.72rem;font-weight:600;background:#ede9fe;color:#5b21b6">
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-          ${esc(l.user||'ไม่ระบุ')}
-        </span>
-      </td>
-      <td>
-        <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:.72rem;font-weight:600;background:${s.bg};color:${s.color};border:1px solid ${s.border}">
-          ${s.icon} ${s.label}
-        </span>
-      </td>
-      <td style="font-size:.79rem;color:var(--g8)">${esc(l.detail||'')}</td>
-    </tr>`;
+  // คำนวณ preview ยอดคงเหลือ (top 5 items ที่มีรายการ)
+  const affectedCodes = [...new Set(toDelete.map(s => s.item_no).filter(Boolean))];
+  const previewLines = affectedCodes.slice(0,5).map(code => {
+    const it = ITEMS.find(i => i.n === code);
+    const name = it ? it.d.substring(0,28) : code;
+    const bal = _calcBalAtEndOfMonth(code, targetMonth);
+    return `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--g2);font-size:.78rem">
+      <span style="color:var(--g6)">${esc(name)}</span>
+      <span style="font-weight:700;color:var(--primary);font-family:monospace">${bal}</span>
+    </div>`;
   }).join('');
+  const moreCount = affectedCodes.length > 5 ? `<div style="font-size:.72rem;color:var(--g4);margin-top:4px">...และอีก ${affectedCodes.length-5} รายการ</div>` : '';
 
-  _renderLogPagination(filtered.length, totalPages);
-}
-
-function _renderLogPagination(total, totalPages) {
-  const info = document.getElementById('logPageInfo');
-  const btns = document.getElementById('logPageBtns');
-  const wrap = document.getElementById('logPagination');
-  if (!info || !btns) return;
-
-  if (total === 0 || totalPages <= 1) {
-    if (wrap) wrap.style.display = total === 0 ? 'none' : 'flex';
-    info.textContent = total > 0 ? `ทั้งหมด ${total} รายการ` : '';
-    btns.innerHTML = '';
-    return;
+  // สร้าง modal
+  const modalId = 'modalAutoArchive';
+  let modal = document.getElementById(modalId);
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = modalId;
+    modal.className = 'modal-bg';
+    document.body.appendChild(modal);
   }
+  modal.innerHTML = `
+    <div class="modal" style="width:min(500px,95vw)">
+      <div class="mh" style="background:linear-gradient(135deg,#0d1757,#1a237e)">
+        <span style="font-size:1.3rem;margin-right:6px">📦</span>
+        <span class="mt">Archive ข้อมูล ${monthName}</span>
+        <span class="mc" onclick="dismissArchive('${targetMonth}','${dismissKey}')">✕</span>
+      </div>
+      <div class="mb2">
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:.82rem;color:#92400e">
+          <b>📅 ถึงเวลา Archive ข้อมูลเดือน ${monthName}</b><br>
+          ระบบจะ<b>ลบประวัติ ${toDelete.length} รายการ</b>ออก แล้วบันทึกยอดคงเหลือสุดท้ายเป็น<b>ยอดยกมา</b>ของแต่ละรายการ
+        </div>
 
-  if (wrap) wrap.style.display = 'flex';
-  const start = (_logPage - 1) * LOG_PER_PAGE + 1;
-  const end   = Math.min(_logPage * LOG_PER_PAGE, total);
-  info.textContent = `แสดง ${start}–${end} จาก ${total} รายการ · หน้า ${_logPage}/${totalPages}`;
+        <div style="font-size:.78rem;font-weight:700;color:var(--g6);margin-bottom:6px">
+          ยอดคงเหลือที่จะกลายเป็นยอดยกมา (${affectedCodes.length} รายการ):
+        </div>
+        <div style="background:var(--g1);border:1px solid var(--g3);border-radius:7px;padding:8px 12px;max-height:180px;overflow-y:auto">
+          ${previewLines}${moreCount}
+        </div>
 
-  // Build page buttons — show at most 7 buttons with ellipsis
-  const btnStyle = (active) =>
-    `padding:4px 10px;border-radius:5px;border:1.5px solid ${active?'var(--primary)':'var(--g3)'};` +
-    `background:${active?'var(--primary)':'#fff'};color:${active?'#fff':'var(--g6)'};` +
-    `cursor:${active?'default':'pointer'};font-size:.78rem;font-weight:600;font-family:'Sarabun',sans-serif;transition:all .15s;`;
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:7px;padding:8px 12px;margin-top:12px;font-size:.78rem;color:#b91c1c">
+          ⚠️ ประวัติรายการของเดือน ${monthName} จะถูกลบถาวร ไม่สามารถกู้คืนได้<br>
+          (แนะนำ Backup ก่อนกด Archive)
+        </div>
+      </div>
+      <div class="mf" style="gap:8px">
+        <button class="btn bs" onclick="dismissArchive('${targetMonth}','${dismissKey}')">เตือนภายหลัง</button>
+        <button class="btn bx" style="background:var(--primary);color:#fff;border-color:var(--primary)" onclick="runArchive('${targetMonth}')">
+          📦 Archive เดือน ${monthName}
+        </button>
+      </div>
+    </div>`;
+  modal.classList.add('open');
+}
 
-  let html = '';
+function _calcBalAtEndOfMonth(code, yyyymm) {
+  // คำนวณยอดสะสมทั้งหมด ถึงสิ้นเดือน yyyymm
+  const no = (code||'').trim().toUpperCase();
+  const it = ITEMS.find(i => i.n === no);
+  let net = (it && it.bal != null) ? Number(it.bal) : 0;
+  saved.forEach(s => {
+    const sCode = (s.item_no||'').trim().toUpperCase();
+    if (sCode !== no) return;
+    if (!s.date) return;
+    // เอาทุกรายการที่ date <= สิ้นเดือน
+    const sMonth = s.date.substring(0, 7);
+    if (sMonth > yyyymm) return;
+    net += s.type === 'receive' ? (s.qty||0) : -(s.qty||0);
+  });
+  return net;
+}
 
-  // Prev
-  html += `<button style="${btnStyle(false)}opacity:${_logPage===1?'.4':'1'}" ${_logPage===1?'disabled':''} onclick="logGoPage(${_logPage-1})">‹ ก่อน</button>`;
+function runArchive(targetMonth) {
+  // ── 1. คำนวณยอดสุดท้ายของทุก item ที่มีรายการในเดือนนั้น ──
+  const affectedCodes = [...new Set(
+    saved.filter(s => (s.date||'').startsWith(targetMonth) && s.item_no)
+         .map(s => s.item_no.trim().toUpperCase())
+  )];
 
-  // Page numbers
-  const pages = _buildPageNums(_logPage, totalPages);
-  pages.forEach(p => {
-    if (p === '…') {
-      html += `<span style="padding:4px 6px;font-size:.78rem;color:var(--g4)">…</span>`;
-    } else {
-      html += `<button style="${btnStyle(p===_logPage)}" onclick="logGoPage(${p})">${p}</button>`;
+  let updatedCount = 0;
+  affectedCodes.forEach(code => {
+    const newBal = _calcBalAtEndOfMonth(code, targetMonth);
+    const idx = ITEMS.findIndex(i => i.n === code);
+    if (idx >= 0) {
+      ITEMS[idx].bal = newBal;
+      updatedCount++;
     }
   });
 
-  // Next
-  html += `<button style="${btnStyle(false)}opacity:${_logPage===totalPages?'.4':'1'}" ${_logPage===totalPages?'disabled':''} onclick="logGoPage(${_logPage+1})">ถัดไป ›</button>`;
+  // ── 2. ลบ history ของเดือนนั้นออก ──
+  const before = saved.length;
+  saved = saved.filter(s => !(s.date||'').startsWith(targetMonth));
+  const deleted = before - saved.length;
 
-  btns.innerHTML = html;
-}
+  // ── 3. บันทึกทุกอย่าง ──
+  saveItems();
+  localStorage.setItem('orSE', JSON.stringify(saved));
+  if (window._fbWrite) window._fbWrite('orSE', saved);
 
-function _buildPageNums(cur, total) {
-  if (total <= 7) return Array.from({length: total}, (_, i) => i+1);
-  const pages = [];
-  if (cur <= 4) {
-    for (let i=1; i<=5; i++) pages.push(i);
-    pages.push('…'); pages.push(total);
-  } else if (cur >= total-3) {
-    pages.push(1); pages.push('…');
-    for (let i=total-4; i<=total; i++) pages.push(i);
-  } else {
-    pages.push(1); pages.push('…');
-    for (let i=cur-1; i<=cur+1; i++) pages.push(i);
-    pages.push('…'); pages.push(total);
-  }
-  return pages;
-}
+  // ── 4. Mark ว่า archive แล้ว ──
+  localStorage.setItem(ARCHIVE_KEY, targetMonth);
+  if (window._fbWrite) window._fbWrite(ARCHIVE_KEY, targetMonth);
 
-function logGoPage(p) {
-  _logPage = p;
-  renderLog();
-  // scroll ตารางกลับขึ้นบน
-  document.getElementById('tlog')?.scrollIntoView({behavior:'smooth', block:'start'});
-}
-
-function clearActivityLog() {
-  requireMasterPin('🔐 ยืนยันเพื่อล้าง Activity Log ทั้งหมด', () => {
-    saveLogs([]);
-    renderLog();
-    showT('🗑️ ล้าง Activity Log แล้ว', 'ok');
+  // ── 5. บันทึก Archive Log ──
+  const archiveLogs = (() => {
+    try { return JSON.parse(localStorage.getItem(ARCHIVE_LOG_KEY)||'[]'); } catch { return []; }
+  })();
+  archiveLogs.push({
+    month: targetMonth,
+    archivedAt: new Date().toLocaleString('th-TH'),
+    deletedRows: deleted,
+    updatedItems: updatedCount
   });
+  localStorage.setItem(ARCHIVE_LOG_KEY, JSON.stringify(archiveLogs));
+  if (window._fbWrite) window._fbWrite(ARCHIVE_LOG_KEY, archiveLogs);
+
+  // ── 6. UI ──
+  const modal = document.getElementById('modalAutoArchive');
+  if (modal) modal.classList.remove('open');
+  updSum(); rHist(); renderCal(); rItems();
+  addLog('edit', `📦 Archive เดือน ${targetMonth} — ลบ ${deleted} รายการ, อัปเดตยอดยกมา ${updatedCount} รายการ`);
+  showT(`✅ Archive เสร็จ: ลบ ${deleted} รายการ · ยอดยกมา ${updatedCount} รายการอัปเดตแล้ว`, 'ok');
 }
 
-// Sync Firebase — Recent Items Log
-if (window._fbListen) {
-  window._fbListen(RECENT_ITEMS_KEY, val => {
-    if (Array.isArray(val)) {
-      localStorage.setItem(RECENT_ITEMS_KEY, JSON.stringify(val));
-      const bar = document.getElementById('recentItemsBar');
-      if (bar && bar.style.display !== 'none') renderRecentItems(true);
-    }
-  });
+function dismissArchive(targetMonth, dismissKey) {
+  localStorage.setItem(dismissKey, '1');
+  const modal = document.getElementById('modalAutoArchive');
+  if (modal) modal.classList.remove('open');
 }
 
-// Sync Firebase
-if (window._fbListen) {
-  window._fbListen(LOG_KEY, val => {
-    if (Array.isArray(val)) {
-      localStorage.setItem(LOG_KEY, JSON.stringify(val));
-      _updateLogBadge(val.length);
-      if (document.getElementById('tlog')?.classList.contains('ac')) renderLog();
-    }
-  });
-}
+// ── เรียก check เมื่อโหลดหน้า ──
+window._checkAutoArchive = checkAndRunAutoArchive;
+
+/* ══════════════════════════════════════════
+/* addLog — ปิดการใช้งาน ไม่บันทึก Log แล้ว (ประหยัด Firebase) */
+function addLog(action, detail) { /* no-op */ }
 
 function updSum() {
   const sTotal = document.getElementById('sTotal');
@@ -9718,40 +9496,6 @@ function noteFmtColor(color) {
 function noteFmtBg(color) {
   document.getElementById('noteEditor')?.focus();
   document.execCommand('hiliteColor', false, color);
-}
-
-// ── Note: insert helpers ──
-function noteInsertHR() {
-  document.getElementById('noteEditor')?.focus();
-  document.execCommand('insertHTML', false,
-    '<hr style="border:none;border-top:2px solid #e2e8f0;margin:12px 0">');
-  noteMarkDirty();
-}
-function noteInsertLink() {
-  const url = prompt('URL ของลิงก์:');
-  if (!url) return;
-  document.getElementById('noteEditor')?.focus();
-  const sel = window.getSelection();
-  if (sel && sel.toString()) {
-    document.execCommand('createLink', false, url);
-  } else {
-    const text = prompt('ข้อความลิงก์:') || url;
-    document.execCommand('insertHTML', false,
-      `<a href="${url}" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:underline">${text}</a>`);
-  }
-  noteMarkDirty();
-}
-function noteInsertTable() {
-  const rows = parseInt(prompt('จำนวนแถว:', '3')) || 3;
-  const cols = parseInt(prompt('จำนวนคอลัมน์:', '3')) || 3;
-  let th = '<tr>' + Array(cols).fill(0).map((_,i) => `<th style="border:1px solid #e2e8f0;padding:6px 10px;background:#f1f5f9;font-weight:600;font-size:.8rem">หัว ${i+1}</th>`).join('') + '</tr>';
-  let tbody = Array(rows).fill(0).map(() =>
-    '<tr>' + Array(cols).fill(0).map(() => '<td style="border:1px solid #e2e8f0;padding:6px 10px;font-size:.82rem"> </td>').join('') + '</tr>'
-  ).join('');
-  const html = `<table style="border-collapse:collapse;width:100%;margin:8px 0"><thead>${th}</thead><tbody>${tbody}</tbody></table><p><br></p>`;
-  document.getElementById('noteEditor')?.focus();
-  document.execCommand('insertHTML', false, html);
-  noteMarkDirty();
 }
 
 // ── Word count ──

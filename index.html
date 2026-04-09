@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stock Card OR</title>
+<title>Stock Card OR — ห้องผ่าตัด v4</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://apis.google.com/js/api.js" async defer></script>
@@ -632,6 +632,35 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
       try { return new TextEncoder().encode(JSON.stringify(val)).length; } catch { return 0; }
     }
 
+    // ── Firebase usage bar (orSE + orItems + orNotes คือ BIG_KEYS ที่กิน space มากสุด) ──
+    window._fbUpdateUsage = function() {
+      try {
+        const keys = ['orSE','orItems','orNotes'];
+        let total = 0;
+        keys.forEach(k => {
+          total += new TextEncoder().encode(localStorage.getItem(k)||'').length;
+        });
+        const LIMIT = 1024 * 1024; // 1MB per doc (orSE เป็น doc ใหญ่สุด)
+        const orSeBytes = new TextEncoder().encode(localStorage.getItem('orSE')||'').length;
+        const pct = Math.min(100, (orSeBytes / LIMIT) * 100);
+        const kb = Math.round(orSeBytes / 1024);
+        const bar = document.getElementById('fbUsageBar');
+        const fill = document.getElementById('fbUsageFill');
+        const utxt = document.getElementById('fbUsageTxt');
+        if (!bar) return;
+        bar.style.display = 'inline-flex';
+        if (fill) {
+          fill.style.width = pct.toFixed(1) + '%';
+          fill.style.background = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : '#22c55e';
+        }
+        if (utxt) {
+          utxt.textContent = kb + 'KB/1MB';
+          utxt.style.color = pct >= 90 ? '#fca5a5' : pct >= 70 ? '#fde68a' : 'rgba(255,255,255,.65)';
+        }
+        if (bar) bar.title = 'orSE (History): ' + kb + 'KB / 1,024KB (' + pct.toFixed(1) + '%)';
+      } catch(e) {}
+    };
+
     window._fbWrite = async function(key, val) {
       if (!window._fbReady) { window._fbPending[key] = val; return; }
       try {
@@ -651,6 +680,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
         }
         const dot = document.getElementById('fbSyncDot');
         if (dot) { dot.style.background='#22c55e'; }
+        if (key === 'orSE' || key === 'orItems' || key === 'orNotes') _fbUpdateUsage();
       } catch(e) {
         console.warn('FB write', key, e);
         const dot = document.getElementById('fbSyncDot');
@@ -777,6 +807,9 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
       const txt = document.getElementById('fbSyncTxt');
       if (dot) { dot.style.background = '#22c55e'; dot.title = 'เชื่อมต่อ Firebase แล้ว'; }
       if (txt) txt.textContent = 'เชื่อมต่อแล้ว ✓';
+
+      // ── แสดง usage bar ──
+      _fbUpdateUsage();
 
       // ── ตรวจขนาดข้อมูล orSE แจ้งเตือนถ้าใกล้ limit ──
       try {
@@ -1019,6 +1052,12 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
   </span>
   <span id="fbSyncDot" title="กำลังเชื่อมต่อ..." style="width:7px;height:7px;border-radius:50%;background:#f59e0b;display:inline-block;flex-shrink:0;transition:background .3s"></span>
   <span id="fbSyncTxt" style="font-size:.71rem;color:rgba(255,255,255,.55)">กำลังเชื่อมต่อ...</span>
+  <span id="fbUsageBar" title="พื้นที่ Firebase orSE" style="display:none;align-items:center;gap:4px;font-size:.69rem;color:rgba(255,255,255,.6)">
+    <span style="display:inline-block;width:52px;height:5px;border-radius:3px;background:rgba(255,255,255,.18);overflow:hidden;vertical-align:middle">
+      <span id="fbUsageFill" style="display:block;height:100%;border-radius:3px;background:#22c55e;transition:width .4s,background .4s"></span>
+    </span>
+    <span id="fbUsageTxt" style="font-family:monospace;font-size:.68rem;color:rgba(255,255,255,.65)">0KB/1MB</span>
+  </span>
 
   <button class="gd-bar-btn" onclick="(function(){if(window._fbPermError){if(confirm('❌ Firebase: ไม่มีสิทธิ์เข้าถึง Firestore\n\nสาเหตุ: Firestore Security Rules ไม่อนุญาต Anonymous Auth\n\nวิธีแก้ใน Firebase Console:\n1. ไปที่ Firestore Database → Rules\n2. เปลี่ยน Rules เป็น:\n\nrules_version = \'2\';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if request.auth != null;\n    }\n  }\n}\n\n3. ตรวจสอบว่า Anonymous Auth เปิดอยู่:\n   Authentication → Sign-in method → Anonymous → Enable\n\nกด OK เพื่อ Reload หน้า หรือ Cancel เพื่อปิด')){location.reload();}}else{window._reloadAppData&&window._reloadAppData();};})()" title="ซิงค์จาก Firebase">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Sync Firebase
@@ -7773,6 +7812,10 @@ window._checkAutoArchive = checkAndRunAutoArchive;
    - ลบ txn ของเดือนที่ archive ออก
 ══════════════════════════════════════════ */
 function openManualArchive() {
+  requireMasterPin('🔐 ยืนยันตัวตนก่อน Archive ข้อมูล', _doOpenManualArchive);
+}
+
+function _doOpenManualArchive() {
   // เดือนที่กำลัง view ใน calendar
   const ym = `${_calYear}-${String(_calMonth).padStart(2,'0')}`;
   const nowYM = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`;

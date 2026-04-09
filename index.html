@@ -653,25 +653,45 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
         if (dot) { dot.style.background='#22c55e'; }
       } catch(e) {
         console.warn('FB write', key, e);
-        // แจ้ง user เฉพาะ quota error
-        if (e.message && e.message.includes('maximum allowed size')) {
-          const dot = document.getElementById('fbSyncDot');
+        const dot = document.getElementById('fbSyncDot');
+        const txt = document.getElementById('fbSyncTxt');
+        if (e.code === 'permission-denied' || (e.message && e.message.toLowerCase().includes('permission'))) {
+          if (dot) { dot.style.background='#ef4444'; dot.title='Firebase: ไม่มีสิทธิ์เขียนข้อมูล — กรุณาตรวจสอบ Firestore Security Rules'; }
+          if (txt) { txt.textContent='❌ ไม่มีสิทธิ์ (Rules)'; txt.style.color='#fca5a5'; }
+          window._fbPermError = true;
+        } else if (e.message && e.message.includes('maximum allowed size')) {
           if (dot) { dot.style.background='#ef4444'; dot.title='Firebase: ข้อมูลเกิน 1MB — ลองลดข้อมูลใน Log หรือ History'; }
+          if (txt) { txt.textContent='❌ ข้อมูลเกิน 1MB'; txt.style.color='#fca5a5'; }
+        } else {
+          if (dot) { dot.style.background='#f59e0b'; dot.title='Firebase: เขียนข้อมูลไม่สำเร็จ — ' + (e.message||e.code||'unknown'); }
+          if (txt) { txt.textContent='⚠️ บันทึก Firebase ไม่สำเร็จ'; txt.style.color='#fde68a'; }
         }
       }
     };
 
     window._fbRead = async function(key) {
-      if (BIG_KEYS.has(key)) {
-        const snap = await getDoc(_kvDoc(key));
-        if (!snap.exists()) return null;
-        const d = snap.data();
-        return d.value !== undefined ? d.value : null;
-      } else {
-        const snap = await getDoc(DOC_MAIN);
-        if (!snap.exists()) return null;
-        const data = snap.data();
-        return key in data ? data[key] : null;
+      try {
+        if (BIG_KEYS.has(key)) {
+          const snap = await getDoc(_kvDoc(key));
+          if (!snap.exists()) return null;
+          const d = snap.data();
+          return d.value !== undefined ? d.value : null;
+        } else {
+          const snap = await getDoc(DOC_MAIN);
+          if (!snap.exists()) return null;
+          const data = snap.data();
+          return key in data ? data[key] : null;
+        }
+      } catch(e) {
+        console.warn('FB read', key, e);
+        if (e.code === 'permission-denied' || (e.message && e.message.toLowerCase().includes('permission'))) {
+          const dot = document.getElementById('fbSyncDot');
+          const txt = document.getElementById('fbSyncTxt');
+          if (dot) { dot.style.background='#ef4444'; dot.title='Firebase: ไม่มีสิทธิ์อ่านข้อมูล — กรุณาตรวจสอบ Firestore Security Rules'; }
+          if (txt) { txt.textContent='❌ ไม่มีสิทธิ์ (Rules)'; txt.style.color='#fca5a5'; }
+          window._fbPermError = true;
+        }
+        return null;
       }
     };
 
@@ -682,7 +702,13 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
           const d = snap.data();
           if (d.value !== undefined) cb(d.value);
         }, err => {
-          if (err.code !== 'permission-denied') console.warn('FB listen', key, err);
+          if (err.code === 'permission-denied') {
+            const dot = document.getElementById('fbSyncDot');
+            const txt = document.getElementById('fbSyncTxt');
+            if (dot) { dot.style.background='#ef4444'; dot.title='Firebase: ไม่มีสิทธิ์ (Firestore Rules) — กรุณาตรวจสอบใน Firebase Console'; }
+            if (txt) { txt.textContent='❌ ไม่มีสิทธิ์ (Rules)'; txt.style.color='#fca5a5'; }
+            window._fbPermError = true;
+          } else { console.warn('FB listen', key, err); }
         });
       } else {
         return onSnapshot(DOC_MAIN, snap => {
@@ -690,13 +716,25 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
           const data = snap.data();
           if (key in data) cb(data[key]);
         }, err => {
-          if (err.code !== 'permission-denied') console.warn('FB listen', key, err);
+          if (err.code === 'permission-denied') {
+            const dot = document.getElementById('fbSyncDot');
+            const txt = document.getElementById('fbSyncTxt');
+            if (dot) { dot.style.background='#ef4444'; dot.title='Firebase: ไม่มีสิทธิ์ (Firestore Rules) — กรุณาตรวจสอบใน Firebase Console'; }
+            if (txt) { txt.textContent='❌ ไม่มีสิทธิ์ (Rules)'; txt.style.color='#fca5a5'; }
+            window._fbPermError = true;
+          } else { console.warn('FB listen', key, err); }
         });
       }
     };
 
     // Sign in anonymously then sync
-    signInAnonymously(auth).catch(e => console.warn('FB auth:', e));
+    signInAnonymously(auth).catch(e => {
+      console.warn('FB auth:', e);
+      const dot = document.getElementById('fbSyncDot');
+      const txt = document.getElementById('fbSyncTxt');
+      if (dot) { dot.style.background='#ef4444'; dot.title='Firebase: Sign-in ไม่สำเร็จ — ' + (e.message||e.code||''); }
+      if (txt) { txt.textContent='❌ เชื่อม Firebase ไม่ได้'; txt.style.color='#fca5a5'; }
+    });
     onAuthStateChanged(auth, async user => {
       if (!user) return;
       window._fbReady = true;
@@ -982,7 +1020,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
   <span id="fbSyncDot" title="กำลังเชื่อมต่อ..." style="width:7px;height:7px;border-radius:50%;background:#f59e0b;display:inline-block;flex-shrink:0;transition:background .3s"></span>
   <span id="fbSyncTxt" style="font-size:.71rem;color:rgba(255,255,255,.55)">กำลังเชื่อมต่อ...</span>
 
-  <button class="gd-bar-btn" onclick="window._reloadAppData&&window._reloadAppData()" title="ซิงค์จาก Firebase">
+  <button class="gd-bar-btn" onclick="(function(){if(window._fbPermError){if(confirm('❌ Firebase: ไม่มีสิทธิ์เข้าถึง Firestore\n\nสาเหตุ: Firestore Security Rules ไม่อนุญาต Anonymous Auth\n\nวิธีแก้ใน Firebase Console:\n1. ไปที่ Firestore Database → Rules\n2. เปลี่ยน Rules เป็น:\n\nrules_version = \'2\';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if request.auth != null;\n    }\n  }\n}\n\n3. ตรวจสอบว่า Anonymous Auth เปิดอยู่:\n   Authentication → Sign-in method → Anonymous → Enable\n\nกด OK เพื่อ Reload หน้า หรือ Cancel เพื่อปิด')){location.reload();}}else{window._reloadAppData&&window._reloadAppData();};})()" title="ซิงค์จาก Firebase">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Sync Firebase
   </button>
 
@@ -1297,6 +1335,10 @@ input:focus,select:focus{outline:none;border-color:var(--primary-l);box-shadow:0
           <button class="btn bx" style="width:100%;padding:6px;font-size:.8rem" onclick="expXLSXMonth()">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             Export เดือนนี้
+          </button>
+          <button class="btn" id="btnManualArchive" style="width:100%;padding:6px;font-size:.8rem;margin-top:6px;background:#fff7ed;border-color:#fb923c;color:#c2410c;font-weight:600" onclick="openManualArchive()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+            Archive เดือนนี้
           </button>
           <!-- Legend hidden -->
           <div style="display:none"></div>
@@ -7038,6 +7080,24 @@ function renderCal() {
   }
 
   grid.innerHTML = html;
+
+  // อัปเดต label ปุ่ม Archive ตามเดือนที่กำลัง view
+  const btnArch = document.getElementById('btnManualArchive');
+  if (btnArch) {
+    const nowYM = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`;
+    const viewYM = `${year}-${String(mon).padStart(2,'0')}`;
+    const hasData = saved.some(s => (s.date||'').startsWith(viewYM));
+    if (viewYM >= nowYM || !hasData) {
+      btnArch.style.opacity = '0.4';
+      btnArch.style.cursor = 'default';
+      btnArch.title = viewYM >= nowYM ? 'ไม่สามารถ Archive เดือนปัจจุบันหรืออนาคต' : 'ไม่มีรายการในเดือนนี้';
+    } else {
+      btnArch.style.opacity = '1';
+      btnArch.style.cursor = 'pointer';
+      btnArch.title = '';
+    }
+    btnArch.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><line x1="10" y1="12" x2="14" y2="12"/></svg>Archive ${TH_MONTHS[mon-1]} ${year+543}`;
+  }
 }
 
 function selectCalDay(dateStr) {
@@ -7703,6 +7763,183 @@ function dismissArchive(targetMonth, dismissKey) {
 
 // ── เรียก check เมื่อโหลดหน้า ──
 window._checkAutoArchive = checkAndRunAutoArchive;
+
+/* ══════════════════════════════════════════
+   MANUAL ARCHIVE — เลือก archive เดือนที่ต้องการจาก calendar
+   Logic:
+   - archive ทีละเดือนเรียงลำดับจากเก่าไปใหม่
+   - แต่ละเดือนคำนวณยอดสุทธิ (bal + รับ - จ่าย ทุก txn ถึงสิ้นเดือนนั้น)
+   - ถ้า archive หลายเดือนติดกัน: M3 ใช้ยอดของ M2 เป็นฐาน (chain)
+   - ลบ txn ของเดือนที่ archive ออก
+══════════════════════════════════════════ */
+function openManualArchive() {
+  // เดือนที่กำลัง view ใน calendar
+  const ym = `${_calYear}-${String(_calMonth).padStart(2,'0')}`;
+  const nowYM = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`;
+
+  // ห้าม archive เดือนปัจจุบัน
+  if (ym >= nowYM) {
+    showT('⚠️ ไม่สามารถ Archive เดือนปัจจุบันได้ — กรุณาเลือกเดือนก่อนหน้า', 'e');
+    return;
+  }
+
+  // หา txn ในเดือนนี้
+  const txns = saved.filter(s => (s.date||'').startsWith(ym));
+  if (!txns.length) {
+    showT(`ℹ️ ไม่มีรายการในเดือน ${TH_MONTHS[_calMonth-1]} ${_calYear+543}`, 'e');
+    return;
+  }
+
+  // หา months ที่ยังไม่ได้ archive ที่ <= ym เรียงจากเก่าไปใหม่
+  const allMonths = [...new Set(saved.map(s => (s.date||'').substring(0,7)).filter(m => m && m <= ym && m < nowYM))].sort();
+
+  // คำนวณ preview ยอดคงเหลือสำหรับแต่ละ item ที่มีใน allMonths (chain)
+  const affectedCodes = [...new Set(
+    saved.filter(s => allMonths.includes((s.date||'').substring(0,7)) && s.item_no)
+         .map(s => s.item_no.trim().toUpperCase())
+  )];
+
+  // preview lines สำหรับเดือนที่เลือก
+  const previewLines = affectedCodes.slice(0,6).map(code => {
+    const it = ITEMS.find(i => i.n === code);
+    const name = it ? it.d.substring(0,30) : code;
+    const bal = _calcBalAtEndOfMonth(code, ym);
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid var(--g2);font-size:.78rem">
+      <span style="color:var(--g6);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px" title="${esc(name)}">${esc(code)} ${esc(name)}</span>
+      <span style="font-weight:700;color:var(--primary);font-family:monospace;flex-shrink:0;margin-left:8px">${bal}</span>
+    </div>`;
+  }).join('');
+  const moreCount = affectedCodes.length > 6 ? `<div style="font-size:.72rem;color:var(--g4);margin-top:4px">...และอีก ${affectedCodes.length-6} รายการ</div>` : '';
+
+  const thM = TH_MONTHS[_calMonth-1] + ' ' + (_calYear+543);
+  const totalTxn = saved.filter(s => allMonths.includes((s.date||'').substring(0,7))).length;
+  const chainNote = allMonths.length > 1
+    ? `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:8px 12px;margin-bottom:10px;font-size:.78rem;color:#1e40af">
+        📎 มีข้อมูลสะสม <b>${allMonths.length} เดือน</b> (${allMonths[0]} ถึง ${allMonths[allMonths.length-1]}) รวม ${totalTxn} รายการ<br>
+        ระบบจะ Archive เรียงลำดับ: ยอดสุดท้ายของแต่ละเดือนจะถูกยกไปเป็น <b>ยอดยกมาของเดือนถัดไป</b>
+       </div>`
+    : '';
+
+  const modalId = 'modalManualArchive';
+  let modal = document.getElementById(modalId);
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = modalId;
+    modal.className = 'modal-bg';
+    document.body.appendChild(modal);
+  }
+  // สร้าง chain button แยกต่างหากเพื่อหลีกเลี่ยง nested backtick
+  var chainBtn = '';
+  if (allMonths.length > 1) {
+    var monthsJson = JSON.stringify(allMonths);
+    chainBtn = '<button class="btn" style="background:#dbeafe;color:#1e40af;border-color:#93c5fd;font-weight:600" onclick="runManualArchiveChain(' + monthsJson + ')">📦 Archive ทั้ง ' + allMonths.length + ' เดือน (chain)</button>';
+  }
+
+  modal.innerHTML = [
+    '<div class="modal" style="width:min(520px,95vw)">',
+      '<div class="mh" style="background:linear-gradient(135deg,#7c2d12,#c2410c)">',
+        '<span style="font-size:1.2rem;margin-right:6px">📦</span>',
+        '<span class="mt">Archive เดือน ' + thM + '</span>',
+        '<span class="mc" onclick="document.getElementById(\'modalManualArchive\').classList.remove(\'open\')">✕</span>',
+      '</div>',
+      '<div class="mb2">',
+        chainNote,
+        '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:.82rem;color:#92400e">',
+          '📅 Archive <b>' + thM + '</b> — ลบ <b>' + txns.length + ' รายการ</b> แล้วบันทึกยอดคงเหลือเป็น<b>ยอดยกมา</b>',
+        '</div>',
+        '<div style="font-size:.78rem;font-weight:700;color:var(--g6);margin-bottom:6px">ยอดคงเหลือ ณ สิ้นเดือน ' + thM + ' (' + affectedCodes.length + ' รายการ):</div>',
+        '<div style="background:var(--g1);border:1px solid var(--g3);border-radius:7px;padding:8px 12px;max-height:180px;overflow-y:auto;margin-bottom:12px">',
+          previewLines + moreCount,
+        '</div>',
+        '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:7px;padding:8px 12px;font-size:.78rem;color:#b91c1c">',
+          '⚠️ ประวัติรายการจะถูกลบถาวร ไม่สามารถกู้คืนได้ — แนะนำ Backup ก่อน',
+        '</div>',
+      '</div>',
+      '<div class="mf" style="gap:8px">',
+        '<button class="btn bs" onclick="document.getElementById(\'modalManualArchive\').classList.remove(\'open\')">ยกเลิก</button>',
+        chainBtn,
+        '<button class="btn bx" style="background:#c2410c;color:#fff;border-color:#c2410c;font-weight:600" onclick="runManualArchive(\'' + ym + '\')">📦 Archive เฉพาะ ' + thM + '</button>',
+      '</div>',
+    '</div>'
+  ].join('');
+  modal.classList.add('open');
+}
+
+function runManualArchive(targetMonth) {
+  // คำนวณยอดสุดท้ายของทุก item ใน targetMonth (รวม chain จาก bal เดิม)
+  const affectedCodes = [...new Set(
+    saved.filter(s => (s.date||'').startsWith(targetMonth) && s.item_no)
+         .map(s => s.item_no.trim().toUpperCase())
+  )];
+  let updatedCount = 0;
+  affectedCodes.forEach(code => {
+    const newBal = _calcBalAtEndOfMonth(code, targetMonth);
+    const idx = ITEMS.findIndex(i => i.n === code);
+    if (idx >= 0) { ITEMS[idx].bal = newBal; updatedCount++; }
+  });
+
+  const before = saved.length;
+  saved = saved.filter(s => !(s.date||'').startsWith(targetMonth));
+  const deleted = before - saved.length;
+
+  saveItems();
+  localStorage.setItem('orSE', JSON.stringify(saved));
+  if (window._fbWrite) window._fbWrite('orSE', saved);
+  localStorage.setItem(ARCHIVE_KEY, targetMonth);
+  if (window._fbWrite) window._fbWrite(ARCHIVE_KEY, targetMonth);
+
+  const archiveLogs = (() => { try { return JSON.parse(localStorage.getItem(ARCHIVE_LOG_KEY)||'[]'); } catch { return []; } })();
+  archiveLogs.push({ month: targetMonth, archivedAt: new Date().toLocaleString('th-TH'), deletedRows: deleted, updatedItems: updatedCount });
+  localStorage.setItem(ARCHIVE_LOG_KEY, JSON.stringify(archiveLogs));
+  if (window._fbWrite) window._fbWrite(ARCHIVE_LOG_KEY, archiveLogs);
+
+  const modal = document.getElementById('modalManualArchive');
+  if (modal) modal.classList.remove('open');
+  const thM = TH_MONTHS[parseInt(targetMonth.split('-')[1])-1] + ' ' + (parseInt(targetMonth.split('-')[0])+543);
+  updSum(); rHist(); renderCal(); rItems();
+  showT(`✅ Archive ${thM}: ลบ ${deleted} รายการ · ยอดยกมา ${updatedCount} รายการอัปเดตแล้ว`, 'ok');
+}
+
+function runManualArchiveChain(months) {
+  // months = ['2025-01','2025-02','2025-03',...] เรียงจากเก่าไปใหม่
+  let totalDeleted = 0, totalUpdated = 0;
+  months.forEach(targetMonth => {
+    // ณ จุดนี้ ITEMS[x].bal คือยอดยกมาจากเดือนก่อนหน้าที่ archive ไปแล้ว (chain)
+    const affectedCodes = [...new Set(
+      saved.filter(s => (s.date||'').startsWith(targetMonth) && s.item_no)
+           .map(s => s.item_no.trim().toUpperCase())
+    )];
+    affectedCodes.forEach(code => {
+      const newBal = _calcBalAtEndOfMonth(code, targetMonth);
+      const idx = ITEMS.findIndex(i => i.n === code);
+      if (idx >= 0) { ITEMS[idx].bal = newBal; totalUpdated++; }
+    });
+    const before = saved.length;
+    saved = saved.filter(s => !(s.date||'').startsWith(targetMonth));
+    totalDeleted += before - saved.length;
+
+    // บันทึก archive log แต่ละเดือน
+    const archiveLogs = (() => { try { return JSON.parse(localStorage.getItem(ARCHIVE_LOG_KEY)||'[]'); } catch { return []; } })();
+    archiveLogs.push({ month: targetMonth, archivedAt: new Date().toLocaleString('th-TH'), deletedRows: before - saved.length, updatedItems: affectedCodes.length, chain: true });
+    localStorage.setItem(ARCHIVE_LOG_KEY, JSON.stringify(archiveLogs));
+  });
+
+  const lastMonth = months[months.length-1];
+  saveItems();
+  localStorage.setItem('orSE', JSON.stringify(saved));
+  if (window._fbWrite) window._fbWrite('orSE', saved);
+  localStorage.setItem(ARCHIVE_KEY, lastMonth);
+  if (window._fbWrite) window._fbWrite(ARCHIVE_KEY, lastMonth);
+  if (window._fbWrite) {
+    const finalLogs = (() => { try { return JSON.parse(localStorage.getItem(ARCHIVE_LOG_KEY)||'[]'); } catch { return []; } })();
+    window._fbWrite(ARCHIVE_LOG_KEY, finalLogs);
+  }
+
+  const modal = document.getElementById('modalManualArchive');
+  if (modal) modal.classList.remove('open');
+  updSum(); rHist(); renderCal(); rItems();
+  showT(`✅ Archive chain ${months.length} เดือน: ลบ ${totalDeleted} รายการ · ยอดยกมา ${totalUpdated} รายการอัปเดตแล้ว`, 'ok');
+}
 
 /* ══════════════════════════════════════════
 /* addLog — ปิดการใช้งาน ไม่บันทึก Log แล้ว (ประหยัด Firebase) */
